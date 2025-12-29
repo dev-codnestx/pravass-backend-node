@@ -1,0 +1,8 @@
+{
+    "watch": [
+        "dist",
+        ".env.dev"
+    ],
+    "ext": "js,json",
+    "exec": "node dist/index.js"
+}

@@ -1,0 +1,21 @@
+
+  {
+    "compilerOptions": {
+      "outDir": "dist",
+      "module": "NodeNext",
+      "target": "ES2020",
+      "moduleResolution": "nodenext",
+      "esModuleInterop": true,
+      "skipLibCheck": true,
+      "sourceMap": true,
+      "rootDir": "src",
+      "baseUrl": "src", // or the root folder where your code resides
+      "paths": {
+        "@/*": ["*"]
+      }
+    },
+    "include": ["src"],
+    "exclude": ["node_modules", "dist"]
+  }
+  
+
