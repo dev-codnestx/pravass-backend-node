@@ -1,21 +1,19 @@
-
-  {
-    "compilerOptions": {
-      "outDir": "dist",
-      "module": "NodeNext",
-      "target": "ES2020",
-      "moduleResolution": "nodenext",
-      "esModuleInterop": true,
-      "skipLibCheck": true,
-      "sourceMap": true,
-      "rootDir": "src",
-      "baseUrl": "src", // or the root folder where your code resides
-      "paths": {
-        "@/*": ["*"]
-      }
+{
+  "compilerOptions": {
+    "outDir": "dist",
+    "module": "commonjs",          
+    "target": "ES2020",
+    "moduleResolution": "node",     
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "sourceMap": true,
+    "rootDir": "src",
+    "baseUrl": ".",                 
+    "paths": {
+      "@/*": ["src/*"]              
     },
-    "include": ["src"],
-    "exclude": ["node_modules", "dist"]
-  }
-  
-
+     "ignoreDeprecations": "6.0"
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}

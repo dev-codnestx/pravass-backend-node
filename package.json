@@ -1,5 +1,5 @@
 {
-  "name": "create-nodejs-ts-app",
+  "name": "brainstax",
   "version": "3.0.11",
   "description": "Node express mongoose typescript boilerplate",
   "main": "dist/index.js",
@@ -15,7 +15,7 @@
     "compile": "tsc --build && tsc-alias",
     "compile:watch": "concurrently \"tsc --build --watch\" \"tsc-alias --watch\"",
     "pre:dev": "cross-env NODE_ENV=development nodemon dist/index.js",
-    "dev": "npm run compile && concurrently --kill-others \"npm run compile:watch\" \"npm run pre:dev\"",
+    "dev": "cross-env NODE_ENV=development npx tsx watch --require tsconfig-paths/register src/index.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "prettier": "prettier --check **/*.ts",
@@ -76,6 +76,7 @@
     "prettier": "^3.7.4",
     "supertest": "^7.1.4",
     "tsc-alias": "^1.8.16",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.50.1"
   },
