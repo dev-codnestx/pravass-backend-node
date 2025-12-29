@@ -7,13 +7,7 @@ import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 
 const userSchema = new mongoose.Schema<IUserDoc, IUserModel>(
   {
-    firstName: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
-    lastName: {
+    name: {
       type: String,
       required: true,
       trim: true,
@@ -126,7 +120,7 @@ userSchema.plugin(paginate);
  * @returns {Promise<boolean>}
  */
 userSchema.static('isEmailTaken', async function (email: string, excludeUserId: mongoose.ObjectId): Promise<boolean> {
-  const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
+  const user = await this.findOne({ email, _id: { $ne: excludeUserId.toString() } });
   return !!user;
 });
 
@@ -140,11 +134,9 @@ userSchema.method('isPasswordMatch', async function (password: string): Promise<
   return bcrypt.compare(password, user.password);
 });
 
-userSchema.pre('save', async function (next) {
+userSchema.pre('save', async function () {
   const user = this;
   if (user.isModified('password')) user.password = await bcrypt.hash(user.password, 8);
-
-  next();
 });
 
 const User = mongoose.model<IUserDoc, IUserModel>('User', userSchema);

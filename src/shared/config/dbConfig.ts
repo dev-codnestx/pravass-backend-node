@@ -14,10 +14,10 @@ const connectToDatabase = async (): Promise<void> => {
 
   const { protocol, username, password, host, name } = mongooseConfig;
 
-  const mongoURI = `${protocol}://${username}:${encodeURIComponent(
-    password,
-  )}@${host}/${name}?authSource=admin`;
-
+  // const mongoURI = `${protocol}://${username}:${encodeURIComponent(
+  //   password,
+  // )}@${host}/${name}?authSource=admin`;
+  const mongoURI = 'mongodb://127.0.0.1:27017/?directConnection=true&serverSelectionTimeoutMS=2000&appName=mongosh+2.5.10/brainstax'
   const fallbackURI = 'mongodb://127.0.0.1:27017/test_db';
 
   try {

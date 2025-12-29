@@ -1,12 +1,11 @@
-import mongoose, { Model, Document } from 'mongoose';
-import { Types } from 'mongoose';
+import mongoose, { Model, Document,Types } from 'mongoose';
 
 import { AccessAndRefreshTokens } from '@/modules/token/token.interfaces.js';
 import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
 export interface IUser {
-  firstName: string;
-  lastName: string;
+  id: Types.ObjectId;
+name: string;
   email: string;
   password: string;
   isEmailVerified: boolean;

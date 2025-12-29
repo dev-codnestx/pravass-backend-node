@@ -8,7 +8,7 @@ import { NewCreatedUser } from './user.interfaces.js';
 const createUserBody: Partial<Record<keyof NewCreatedUser, any>> = {
   email: Joi.string().required().email(),
   password: Joi.string().required().custom(password),
-  firstName: Joi.string().required(),
+  name: Joi.string().required(),
 };
 
 export const createUser = {

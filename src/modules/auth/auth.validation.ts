@@ -8,8 +8,7 @@ import { NewRegisteredUser } from '../user/user.interfaces.js';
 const registerBody: Partial<Record<keyof NewRegisteredUser, any>> = {
   email: Joi.string().required().email(),
   password: Joi.string().required().custom(password),
-  firstName: Joi.string().required(),
-  lastName: Joi.string().required(),
+  name: Joi.string().required(),
 };
 
 export const register = {
