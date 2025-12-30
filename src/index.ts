@@ -1,3 +1,5 @@
+import 'tsconfig-paths/register.js'; // 👈 this must be first
+
 import { Server } from 'http';
 
 import app from '@/app.js';
