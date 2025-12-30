@@ -62,12 +62,7 @@ export default [
       'no-unused-private-class-members': 'error',
       'no-use-before-define': 'error',
       'require-atomic-updates': 'error',
-'no-console': [
-  'warn',
-  {
-    allow: ['warn', 'error', 'info','log'],
-  },
-],
+      'no-console': ['warn', { allow: ['warn', 'error'] }],
 
       'arrow-body-style': ['error', 'as-needed'],
       'accessor-pairs': 'error',
