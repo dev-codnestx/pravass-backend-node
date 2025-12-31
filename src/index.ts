@@ -3,7 +3,7 @@ import 'tsconfig-paths/register.js'; // 👈 this must be first
 import { Server } from 'http';
 
 import app from '@/app.js';
-import connectToDatabase from './shared/config/dbConfig.js';
+import connectToDatabase from '@/shared/config/dbConfig.js';
 import config from '@/shared/config/config.js';
 
 let server: Server;
