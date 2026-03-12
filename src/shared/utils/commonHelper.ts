@@ -8,6 +8,4 @@ export const getObjectId = (value: string | Types.ObjectId): Types.ObjectId | st
   return value;
 };
 
-export const capitalize = (value: string): string => {
-  return value.charAt(0).toUpperCase() + value.slice(1);
-};
+export const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);

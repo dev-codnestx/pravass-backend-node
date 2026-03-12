@@ -1,11 +1,11 @@
-import mongoose, { Model, Document,Types } from 'mongoose';
+import mongoose, { Model, Document, Types } from 'mongoose';
 
 import { AccessAndRefreshTokens } from '@/modules/token/token.interfaces.js';
 import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
 export interface IUser {
   id: Types.ObjectId;
-name: string;
+  name: string;
   email: string;
   password: string;
   isEmailVerified: boolean;
@@ -13,17 +13,7 @@ name: string;
     dialCode: number;
     phone: number;
   };
-  team: Types.ObjectId[];
-  company: {
-    id: Types.ObjectId;
-    role: Types.ObjectId[];
-  };
-  subCompany: {
-    id: Types.ObjectId;
-    role: Types.ObjectId[];
-  };
-  reportingId: Types.ObjectId;
-  joiningDate: Date;
+
   status: 'active' | 'inActive';
   createdBy: Types.ObjectId;
   updatedBy: Types.ObjectId;
@@ -34,10 +24,10 @@ export interface IUserDoc extends IUser, Document {
 }
 
 export interface IUserModel extends Model<IUserDoc> {
-  isEmailTaken(email: string, excludeUserId?: mongoose.Types.ObjectId): Promise<boolean>;
+  isEmailTaken(email: string, _excludeUserId?: mongoose.Types.ObjectId): Promise<boolean>;
   paginate(
-    filter: Record<string, unknown>, //TODO: later specify correct type;
-    options: Record<string, unknown>, //TODO: later specify correct type;
+    _filter: Record<string, unknown>, //TODO: later specify correct type;
+    _options: Record<string, unknown>, //TODO: later specify correct type;
   ): Promise<QueryResult>;
 }
 

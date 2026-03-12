@@ -1,6 +1,7 @@
 import Joi from 'joi';
 
 import { password } from '@/shared/validations/custom.validation.js';
+
 import { NewRegisteredUser } from '../user/user.interfaces.js';
 
 // TODO: later add correct type

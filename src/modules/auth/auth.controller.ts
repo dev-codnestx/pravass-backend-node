@@ -1,10 +1,13 @@
-import httpStatus from 'http-status';
 import { Request, Response } from 'express';
-import catchAsync from '@/shared/utils/catchAsync.js';
-import { userService } from '../user/index.js';
-import { tokenService } from '../token/index.js';
-import { authService } from './index.js';
+import httpStatus from 'http-status';
+
 import { sendResetPasswordEmail, sendVerificationMail } from '@/shared/email/email.service.js';
+import catchAsync from '@/shared/utils/catchAsync.js';
+
+import { tokenService } from '../token/index.js';
+import { userService } from '../user/index.js';
+
+import { authService } from './index.js';
 
 export const register = catchAsync(async (req: Request, res: Response) => {
   const user = await userService.registerUser(req.body);

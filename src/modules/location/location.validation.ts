@@ -1,10 +1,10 @@
 import Joi, { ObjectSchema } from 'joi';
 
 import Country from '@/modules/location/country/country.model.js';
-import { objectId } from '@/shared/validations/custom.validation.js';
-import { generateJoiValidation } from '@/shared/validations/generateJoiValidation.js';
 import { locationType } from '@/shared/constants/enum.constant.js';
 import { capitalize } from '@/shared/utils/commonHelper.js';
+import { objectId } from '@/shared/validations/custom.validation.js';
+import { generateJoiValidation } from '@/shared/validations/generateJoiValidation.js';
 
 type ValidationShape = {
   body?: ObjectSchema;

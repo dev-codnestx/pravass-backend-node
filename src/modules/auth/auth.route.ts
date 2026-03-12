@@ -1,7 +1,9 @@
 import express, { Router } from 'express';
+
 import authMiddleware from '@/modules/auth/auth.middleware.js';
 import validate from '@/shared/utils/middlewares/validate.middleware.js';
 import { authValidation } from '@/shared/validations/index.js';
+
 import { authController } from './index.js';
 
 const router: Router = express.Router();

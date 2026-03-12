@@ -8,7 +8,7 @@ type MongoosePath = {
     ref?: string;
   };
   isRequired?: boolean | (() => boolean);
-  enumValues?: any[];
+  enumValues?: unknown[];
 };
 
 type MongooseSchemaLike = {
@@ -42,17 +42,12 @@ export const generateJoiValidation = (mongooseSchema: MongooseSchemaLike, isUpda
 
     joiType = isUpdate ? joiType.optional() : isRequired ? joiType.required() : joiType.optional();
 
-    if (path.options?.ref) {
-      joiType = joiType.custom(objectId).optional(); // Assume optional in update
-    }
+    if (path.options?.ref) joiType = joiType.custom(objectId).optional(); // Assume optional in update
 
-    if (path.instance === 'Array' && path.options?.ref) {
+    if (path.instance === 'Array' && path.options?.ref)
       joiType = Joi.array().items(Joi.string().custom(objectId)).optional();
-    }
 
-    if (path.enumValues?.length) {
-      joiType = joiType.valid(...path.enumValues);
-    }
+    if (path.enumValues?.length) joiType = joiType.valid(...(path.enumValues as string[]));
 
     joiSchema[key] = joiType;
   });

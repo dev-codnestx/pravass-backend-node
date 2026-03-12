@@ -1,0 +1,10 @@
+#!/bin/sh
+. "$(dirname "$0")/_/husky.sh"
+
+echo "🔍 Running TypeScript compilation check..."
+npm run compile
+
+echo "🔍 Running full lint check..."
+npm run lint
+
+echo "✅ Pre-push checks passed!"

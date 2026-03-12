@@ -3,8 +3,8 @@ import 'tsconfig-paths/register.js'; // 👈 this must be first
 import { Server } from 'http';
 
 import app from '@/app.js';
-import connectToDatabase from '@/shared/config/dbConfig.js';
 import config from '@/shared/config/config.js';
+import connectToDatabase from '@/shared/config/dbConfig.js';
 
 let server: Server;
 
@@ -24,8 +24,8 @@ const exitHandler = () => {
   else process.exit(1);
 };
 
-const unexpectedErrorHandler = (error: string) => {
-  console.error(error);
+const unexpectedErrorHandler = (err: Error) => {
+  console.warn(err.message);
   exitHandler();
 };
 

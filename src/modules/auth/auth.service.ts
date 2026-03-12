@@ -1,9 +1,11 @@
 import httpStatus from 'http-status';
 import mongoose from 'mongoose';
-import { getUserByEmail, getUserById, updateUserById } from '../user/user.service.js';
+
 import ApiError from '@/shared/utils/errors/ApiError.js';
+
 import { generateAuthTokens, verifyToken } from '../token/token.service.js';
 import { IUserDoc, IUserWithTokens } from '../user/user.interfaces.js';
+import { getUserByEmail, getUserById, updateUserById } from '../user/user.service.js';
 
 /**
  * Login with username and password
@@ -24,8 +26,8 @@ export const loginUserWithEmailAndPassword = async (email: string, password: str
  * @param {string} refreshToken
  * @returns {Promise<void>}
  */
-export const logout = async (refreshToken: string): Promise<void> => {
-  console.log('Logout', refreshToken); // TODO: implement logout
+export const logout = async (_refreshToken: string): Promise<void> => {
+  console.info('Logout', _refreshToken); // TODO: implement logout
 };
 
 /**

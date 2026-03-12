@@ -2,10 +2,10 @@ import httpStatus from 'http-status';
 import mongoose from 'mongoose';
 
 import User from '@/modules/user/user.model.js';
-
 import ApiError from '@/shared/utils/errors/ApiError.js';
+import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
+
 import { IUserDoc, NewCreatedUser, NewRegisteredUser, UpdateUserBody } from './user.interfaces.js';
-import { IOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
 /**
  * Create a user
@@ -38,10 +38,8 @@ export const registerUser = async (userBody: NewRegisteredUser): Promise<IUserDo
 
 // TODO: later add correct type
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export const queryUsers = async (filter: Record<string, any>, options: IOptions): Promise<QueryResult> => {
-  const users = await User.paginate(filter, options);
-  return users;
-};
+export const queryUsers = (filter: Record<string, any>, options: PaginateOptions): Promise<QueryResult> =>
+  Promise.resolve(User.paginate(filter, options as any));
 
 /**
  * Get user by id

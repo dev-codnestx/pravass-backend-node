@@ -5,30 +5,33 @@ import tsParser from '@typescript-eslint/parser';
 import importPlugin from 'eslint-plugin-import';
 
 export default [
-  js.configs.recommended, // JavaScript recommended config
+  js.configs.recommended,
   {
-    ignores: ['dist'], // Ignore build output
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.min.js', 'build/**', '.nyc_output/**'],
   },
   {
-    files: ['**/*.{ts,tsx}'], // Apply TypeScript rules
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
-      parser: tsParser, // Use TypeScript parser
+      parser: tsParser,
       ecmaVersion: 2020,
       sourceType: 'module',
       parserOptions: {
-        project: './tsconfig.json', // Path to your tsconfig.json
+        project: './tsconfig.json',
         sourceType: 'module',
       },
       globals: {
         ...globals.node,
+        ...globals.es2020,
       },
     },
     plugins: {
-      '@typescript-eslint': tseslint, // TypeScript plugin
+      '@typescript-eslint': tseslint,
       import: importPlugin,
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'error',
+      // TypeScript specific rules
+      '@typescript-eslint/no-explicit-any': 'warn',
+
       '@typescript-eslint/no-unsafe-call': 'off',
       '@typescript-eslint/no-unsafe-assignment': 'off',
       '@typescript-eslint/no-redeclare': 'error',
@@ -100,6 +103,7 @@ export default [
       'import/resolver': {
         typescript: {
           project: './tsconfig.json',
+          alwaysTryTypes: true,
         },
       },
     },

@@ -1,23 +1,16 @@
 import { Request, Response, NextFunction } from 'express';
-import passport from 'passport';
 import httpStatus from 'http-status';
-import ApiError from '@/shared/utils/errors/ApiError.js';
+import passport from 'passport';
+
 import { IUserDoc } from '@/modules/user/user.interfaces.js';
+import ApiError from '@/shared/utils/errors/ApiError.js';
 
 const verifyCallback =
-  (req: Request, resolve: () => void, reject: (_err: ApiError) => void, requiredRights: string[]) =>
-  async (err: Error | null, user: IUserDoc | null, info: string) => {
-    if (err || info || !user) return reject(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
+  (req: Request, resolve: () => void, reject: (_err: ApiError) => void, _requiredRights: string[]) =>
+  async (err: Error | null, user: IUserDoc | null, _info: string) => {
+    if (err || _info || !user) return reject(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
 
     req.user = user;
-
-    // if (requiredRights.length) {
-    //   const userRights = roleRights.get(user.role) || [];
-    //   const hasRequiredRights = requiredRights.every((right) => userRights.includes(right));
-    //   const isSelf = req.params['userId'] === user.id;
-
-    //   if (!hasRequiredRights && !isSelf) return reject(new ApiError(httpStatus.FORBIDDEN, 'Forbidden'));
-    // }
 
     resolve();
   };

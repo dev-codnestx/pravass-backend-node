@@ -1,9 +1,10 @@
+import bcrypt from 'bcryptjs';
 import mongoose from 'mongoose';
 import validator from 'validator';
-import bcrypt from 'bcryptjs';
+
+import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 
 import { IUserDoc, IUserModel } from './user.interfaces.js';
-import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 
 const userSchema = new mongoose.Schema<IUserDoc, IUserModel>(
   {
@@ -49,47 +50,7 @@ const userSchema = new mongoose.Schema<IUserDoc, IUserModel>(
         required: true,
       },
     },
-    team: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Team',
-      },
-    ],
-    company: {
-      id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Company',
-      },
-      role: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Role',
-        },
-      ],
-      _id: false,
-    },
 
-    subCompany: {
-      id: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Company',
-      },
-      role: [
-        {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: 'Role',
-        },
-      ],
-      _id: false,
-    },
-    reportingId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    joiningDate: {
-      type: Date,
-      default: Date.now,
-    },
     status: {
       type: String,
       enum: ['active', 'inActive'],
@@ -121,7 +82,7 @@ userSchema.plugin(paginate);
  */
 userSchema.static('isEmailTaken', async function (email: string, excludeUserId: mongoose.ObjectId): Promise<boolean> {
   const user = await this.findOne({ email, _id: { $ne: excludeUserId.toString() } });
-  return !!user;
+  return Boolean(user);
 });
 
 /**

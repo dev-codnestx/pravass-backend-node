@@ -1,6 +1,7 @@
-import { Message } from '@/shared/email/email.interfaces.js';
 import nodemailer from 'nodemailer';
+
 import config from '@/shared/config/config.js';
+import { Message } from '@/shared/email/email.interfaces.js';
 
 export const transport = nodemailer.createTransport(config.email.smtp);
 /* istanbul ignore next */

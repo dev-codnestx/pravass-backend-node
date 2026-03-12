@@ -1,4 +1,5 @@
 import { Schema, model, Document } from 'mongoose';
+
 import { IRole } from './roles.interface.js';
 
 const roleSchema = new Schema<IRole & Document>(

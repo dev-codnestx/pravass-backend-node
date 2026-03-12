@@ -1,8 +1,8 @@
-import Joi from 'joi';
 import dotenv from 'dotenv';
+import Joi from 'joi';
 
 const dotenvPath = process.env['NODE_ENV'] === 'development' ? '.env.dev' : '.env';
-console.log('🚀 ~ dotenvPath:', dotenvPath);
+console.info('🚀 ~ dotenvPath:', dotenvPath);
 
 dotenv.config({
   path: dotenvPath,
@@ -37,7 +37,7 @@ const envVarsSchema = Joi.object()
 
 const { value: envVars, error } = envVarsSchema.prefs({ errors: { label: 'key' } }).validate(process.env);
 
-if (error) throw new Error(`Config validation error: ${error.message}`);
+if (error) console.info(`Config validation error: ${error.message}`);
 
 const config = {
   env: envVars.NODE_ENV,

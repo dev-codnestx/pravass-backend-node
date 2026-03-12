@@ -1,7 +1,8 @@
+import express, { Router } from 'express';
+
 import authMiddleware from '@/modules/auth/auth.middleware.js';
 import { validateMiddleware } from '@/shared/utils/middlewares/index.js';
 import { userValidation } from '@/shared/validations/index.js';
-import express, { Router } from 'express';
 
 import { userController } from './index.js';
 

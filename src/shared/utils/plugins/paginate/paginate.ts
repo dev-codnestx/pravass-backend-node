@@ -1,7 +1,4 @@
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
-import { Document, PipelineStage, Schema, SortOrder } from 'mongoose';
+import { Document, Model, PipelineStage, Schema, SortOrder } from 'mongoose';
 
 export interface PaginateOptions {
   sortBy?: string;
@@ -13,17 +10,31 @@ export interface PaginateOptions {
   alias?: string;
   includeTimeStamps?: boolean;
   isShuffleRecord?: boolean;
+  notDefaultSort?: boolean;
 }
 
-export interface QueryResult<T = Document> {
+export type IOptions = PaginateOptions;
+
+export interface QueryResult<T = any> {
   results: T[];
   page: number;
   limit: number;
   totalPages: number;
   totalResults: number;
+  counts?: Record<string, number>;
+  [key: string]: any;
 }
 
-const buildNestedPopulateQuery = (field: string, selectFields: string[]) => {
+/**
+ * Interface for the Model containing the static paginate method
+ */
+export interface PaginateModel<T extends Document> extends Model<T> {
+  paginate(filter: Record<string, any>, options: PaginateOptions): Promise<QueryResult<T>>;
+}
+
+// --- Helper Functions ---
+
+const buildNestedPopulateQuery = (field: string, selectFields: string[]): any => {
   const nestedPathSegments = field.split('.');
 
   if (nestedPathSegments.length > 1) {
@@ -33,12 +44,11 @@ const buildNestedPopulateQuery = (field: string, selectFields: string[]) => {
       select: selectFields.join(' '),
       populate: buildNestedPopulateQuery(restSegments.join('.'), selectFields),
     };
-  } else {
-    return {
-      path: field,
-      select: selectFields.join(' '),
-    };
   }
+  return {
+    path: field,
+    select: selectFields.join(' '),
+  };
 };
 
 const buildResult = <T>(
@@ -55,8 +65,7 @@ const buildResult = <T>(
   totalResults,
 });
 
-// Extract deep value (normal get)
-function getDeepValue(obj, path) {
+function getDeepValue(obj: any, path: string): any {
   const parts = path.split('.');
   return parts.reduce((current, key) => {
     if (Array.isArray(current)) {
@@ -67,12 +76,10 @@ function getDeepValue(obj, path) {
   }, obj);
 }
 
-// Deep rename field (fixing array handling)
-function renameNestedField(obj, sourcePath, targetKey) {
+function renameNestedField(obj: any, sourcePath: string, targetKey: string): void {
   const parts = sourcePath.split('.');
-  let current = obj;
 
-  function deepRename(currentObj, pathParts) {
+  function deepRename(currentObj: any, pathParts: string[]) {
     if (!currentObj) return;
 
     const [firstPart, ...restParts] = pathParts;
@@ -92,83 +99,86 @@ function renameNestedField(obj, sourcePath, targetKey) {
     }
   }
 
-  deepRename(current, parts);
+  deepRename(obj, parts);
 }
 
-const paginate = <T extends Document>(schema: Schema<T>) => {
-  schema.statics.paginate = async function (
-    filter: Record<string, string> = {},
-    options: PaginateOptions = {},
-  ): Promise<QueryResult<T>> {
-    let sort: Record<string, SortOrder> = {};
-    let responseResult: QueryResult<T>;
+// --- Main Plugin ---
 
+const paginate = <T extends Document>(schema: Schema<T>): void => {
+  schema.statics.paginate = async function (
+    filter: Record<string, any> = {},
+    options: PaginateOptions = {},
+  ): Promise<QueryResult<any>> {
+    const sort: Record<string, SortOrder> = {};
+    let responseResult: QueryResult<any>;
+
+    // 1. Handle Sorting
     if (options.sortBy)
       options.sortBy.split(',').forEach((sortOption) => {
         const [key, order] = sortOption.split(':');
-        const sortOrder = order === 'desc' ? -1 : 1;
-
+        const sortOrder: SortOrder = order === 'desc' ? -1 : 1;
         if (!key) throw new Error(`Invalid field "${key}" passed to sort()`);
 
-        if (key === 'name') sort[key] = sortOrder;
-        else if (key === 'date') sort.createdAt = sortOrder;
+        if (key === 'date') sort.createdAt = sortOrder;
         else sort[key] = sortOrder;
       });
-    else sort.createdAt = -1;
 
-    let limit = 10;
-    let skip = 0;
+    if (!options.aggregation && !options.notDefaultSort && !Object.keys(sort).length) sort.createdAt = -1;
+
+    // 2. Pagination Logic
     const page = (options.page && parseInt(options.page.toString(), 10)) || 1;
+    let limit = options.limit && parseInt(options.limit.toString(), 10) > 0 ? parseInt(options.limit.toString(), 10) : 10;
+    let skip = (page - 1) * limit;
 
     if (page === -1) {
       limit = Number.MAX_SAFE_INTEGER;
       skip = 0;
-    } else {
-      limit = options.limit && parseInt(options.limit.toString(), 10) > 0 ? parseInt(options.limit.toString(), 10) : 10;
-      skip = (page - 1) * limit;
     }
 
     const selectFields = options.fields ? options.fields.split(',') : [];
-    const populateFields = options.populate || '';
+    if (options.includeTimeStamps && options.fields) selectFields.push('createdAt', 'updatedAt');
 
-    let countPromise: Promise<number>;
-    let docsPromise: any;
-
+    // 3. Execution (Aggregation vs Find)
     if (options.aggregation) {
-      docsPromise = this.aggregate(options.aggregation).sort(sort).skip(skip).limit(limit);
+      const aggregationPipeline = [...options.aggregation];
 
-      const countPipeline = [...options.aggregation, { $count: 'totalResults' }];
+      // Handle count separately for aggregations
+      const countPipeline = [...aggregationPipeline, { $count: 'totalResults' }];
       const countResult = await this.aggregate(countPipeline);
-
       const totalResults = countResult.length > 0 ? countResult[0].totalResults : 0;
       const totalPages = Math.ceil(totalResults / limit);
-      let results = await docsPromise;
+
+      // Main query
+      let query = this.aggregate(aggregationPipeline);
+      if (Object.keys(sort).length) query = query.sort(sort);
+
+      let results = await query.skip(skip).limit(limit).exec();
 
       if (options.isShuffleRecord) results = results.sort(() => Math.random() - 0.5);
 
       const formattedResults = results.map((doc: any) => {
-        if (typeof options.alias === 'string' && options.alias.length > 0) {
+        if (options.alias) {
           const aliasRules = options.alias
             .split(';')
             .map((r) => r.trim())
             .filter(Boolean);
-
           aliasRules.forEach((rule) => {
             if (rule.includes('::')) {
               const [sourcePath, targetKey] = rule.split('::').map((s) => s.trim());
               renameNestedField(doc, sourcePath, targetKey);
             } else if (rule.includes(':')) {
               const [basePath, fieldsString] = rule.split(':').map((s) => s.trim());
-              const fields = fieldsString.split(',').map((f) => f.trim());
-              fields.forEach((field) => {
-                const fullPath = basePath ? `${basePath}.${field}` : field;
-                const value = getDeepValue(doc, fullPath);
-                if (value !== undefined) doc[field] = value;
-              });
+              fieldsString
+                .split(',')
+                .map((f) => f.trim())
+                .forEach((field) => {
+                  const fullPath = basePath ? `${basePath}.${field}` : field;
+                  const value = getDeepValue(doc, fullPath);
+                  if (value !== undefined) doc[field] = value;
+                });
             }
           });
         }
-
         doc.id = doc._id;
         delete doc._id;
         return doc;
@@ -176,102 +186,77 @@ const paginate = <T extends Document>(schema: Schema<T>) => {
 
       responseResult = buildResult(formattedResults, totalResults, totalPages, page, limit);
     } else {
-      countPromise = this.countDocuments(filter).exec();
-      docsPromise = this.find(filter).sort(sort).skip(skip).limit(limit);
+      // Standard Find Query
+      const countPromise = this.countDocuments(filter).exec();
+      let docsPromise = this.find(filter).sort(sort).skip(skip).limit(limit);
 
       if (selectFields.length > 0) docsPromise = docsPromise.select(selectFields.join(' '));
 
-      if (populateFields.length > 0)
-        populateFields.split(';').forEach((populateOption) => {
-          populateOption = populateOption.trim();
-          if (!populateOption) return;
+      // Handle Populates
+      if (options.populate)
+        options.populate.split(';').forEach((populateOption) => {
+          const opt = populateOption.trim();
+          if (!opt) return;
 
-          const [path, fields] = populateOption.split(':');
+          const [path, fields] = opt.split(':');
           const select = fields ? fields.split(',').map((f) => f.trim()) : ['_id'];
 
-          if (path) {
-            const pathSegments = path.split('-');
-
-            if (pathSegments.length === 2) {
-              const [parentField, childFields] = pathSegments;
-              const childPathSegments = childFields.split(',');
-
+          if (path)
+            if (path.includes('-')) {
+              const [parentField, childFields] = path.split('-');
               docsPromise = docsPromise.populate({
                 path: parentField,
                 select: select.join(' '),
-                populate: childPathSegments.map((childField) => buildNestedPopulateQuery(childField, select)),
+                populate: childFields.split(',').map((child) => buildNestedPopulateQuery(child, select)),
               });
             } else if (path.includes('.')) {
-              const [parentField, ...rest] = path.split('.');
-              const childPath = rest.join('.');
-
+              const [parent, ...rest] = path.split('.');
               docsPromise = docsPromise.populate({
-                path: parentField,
+                path: parent,
                 select: select.join(' '),
-                populate: buildNestedPopulateQuery(childPath, select),
+                populate: buildNestedPopulateQuery(rest.join('.'), select),
               });
             } else {
-              docsPromise = docsPromise.populate({
-                path,
-                select: select.join(' '),
-              });
+              docsPromise = docsPromise.populate({ path, select: select.join(' ') });
             }
-          }
         });
-      await Promise.all([countPromise, docsPromise]).then((values) => {
-        let [totalResults, results] = values;
 
-        const totalPages = page === -1 ? 1 : Math.ceil(totalResults / limit);
+      const [totalResults, results] = await Promise.all([countPromise, docsPromise]);
+      const totalPages = page === -1 ? 1 : Math.ceil(totalResults / limit);
 
-        if (options.isShuffleRecord === true) results = results.sort(() => Math.random() - 0.5);
+      let finalResults = results;
+      if (options.isShuffleRecord) finalResults = finalResults.sort(() => Math.random() - 0.5);
 
-        // Extract deep value (normal get)===
-        function getDeepValue(obj, path) {
-          const parts = path.split('.');
-          return parts.reduce((current, key) => {
-            if (Array.isArray(current)) {
-              const values = current.map((item) => item?.[key]);
-              return values.find((v) => v !== undefined && v !== null);
-            }
-            return current ? current[key] : undefined;
-          }, obj);
-        }
+      const formattedResults = finalResults.map((doc: any) => {
+        // Apply mapping/formatting to plain objects or Mongoose docs
+        const plainDoc = doc.toJSON ? doc.toJSON({ virtuals: true }) : doc;
 
-        const formattedResults = results.map((doc) => {
-          if (options.populate && options.populate.length > 0) {
-            const aliasRules = options.populate
-              .split(';')
-              .map((r) => r.trim())
-              .filter(Boolean);
-
-            aliasRules.forEach((rule) => {
+        if (options.populate)
+          options.populate
+            .split(';')
+            .map((r) => r.trim())
+            .filter(Boolean)
+            .forEach((rule) => {
               if (rule.includes(':')) {
                 const [basePath, fieldsString] = rule.split(':').map((s) => s.trim());
-                const fields = fieldsString.split(',').map((f) => f.trim());
-                fields.forEach((field) => {
-                  const fullPath = basePath ? `${basePath}.${field}` : field;
-                  const value = getDeepValue(doc, fullPath);
-                  // Do not overwrite existing top-level fields (e.g., prevent source.name from overriding name)
-                  if (value !== undefined && doc[field] === undefined) doc[field] = value;
-                });
+                fieldsString
+                  .split(',')
+                  .map((f) => f.trim())
+                  .forEach((field) => {
+                    const fullPath = basePath ? `${basePath}.${field}` : field;
+                    const value = getDeepValue(plainDoc, fullPath);
+                    if (value !== undefined) plainDoc[field] = value;
+                  });
               }
             });
-          }
 
-          doc.id = doc._id;
-          delete doc._id;
-          return doc;
-        });
-        results = formattedResults.map((doc) =>
-          doc.toJSON({
-            includeTimeStamps: options.includeTimeStamps,
-            alias: options.alias || {},
-          }),
-        );
-
-        responseResult = buildResult(results, totalResults, totalPages, page, limit);
+        plainDoc.id = plainDoc._id;
+        return plainDoc;
       });
+
+      responseResult = buildResult(formattedResults, totalResults, totalPages, page, limit);
     }
+
     return responseResult;
   };
 };

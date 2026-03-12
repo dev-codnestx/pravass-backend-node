@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-import Joi from 'joi';
 import httpStatus from 'http-status';
-import pick from '@/shared/utils/pick.js';
+import Joi from 'joi';
+
 import ApiError from '@/shared/utils/errors/ApiError.js';
+import pick from '@/shared/utils/pick.js';
 
 const validate =
   (

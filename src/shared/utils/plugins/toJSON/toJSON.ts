@@ -6,11 +6,7 @@ import { Document } from 'mongoose';
  *  - replaces _id with id
  */
 
-const deleteAtPath = (
-  obj: Record<string, unknown>,
-  path: string[],
-  index: number,
-): void => {
+const deleteAtPath = (obj: Record<string, unknown>, path: string[], index: number): void => {
   const key = path[index];
   if (!key) return;
 
@@ -20,22 +16,19 @@ const deleteAtPath = (
   }
 
   const next = obj[key];
-  if (typeof next === 'object' && next !== null)
-    deleteAtPath(next as Record<string, unknown>, path, index + 1);
+  if (typeof next === 'object' && next !== null) deleteAtPath(next as Record<string, unknown>, path, index + 1);
 };
 
 // TODO: later add correct type
 /* eslint-disable @typescript-eslint/no-explicit-any */
 const toJSON = (schema: any) => {
   let transform: Function;
-  if (schema.options.toJSON && schema.options.toJSON.transform)
-    transform = schema.options.toJSON.transform;
+  if (schema.options.toJSON && schema.options.toJSON.transform) transform = schema.options.toJSON.transform;
 
   schema.options.toJSON = Object.assign(schema.options.toJSON || {}, {
     transform(doc: Document, ret: any, options: Record<string, any>) {
       Object.keys(schema.paths).forEach((path) => {
-        if (schema.paths[path].options && schema.paths[path].options.private)
-          deleteAtPath(ret, path.split('.'), 0);
+        if (schema.paths[path].options && schema.paths[path].options.private) deleteAtPath(ret, path.split('.'), 0);
       });
 
       ret.id = ret._id.toString();

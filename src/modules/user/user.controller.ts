@@ -1,14 +1,13 @@
-import mongoose from 'mongoose';
-import httpStatus from 'http-status';
 import { Request, Response } from 'express';
+import httpStatus from 'http-status';
+import mongoose from 'mongoose';
 
 import catchAsync from '@/shared/utils/catchAsync.js';
-import pick from '@/shared/utils/pick.js';
-
 import ApiError from '@/shared/utils/errors/ApiError.js';
+import pick from '@/shared/utils/pick.js';
+import { PaginateOptions } from '@/shared/utils/plugins/paginate/paginate.js';
 
 import { userService } from './index.js';
-import { IOptions } from '@/shared/utils/plugins/paginate/paginate.js';
 
 export const createUser = catchAsync(async (req: Request, res: Response) => {
   const user = await userService.createUser(req.body);
@@ -17,7 +16,7 @@ export const createUser = catchAsync(async (req: Request, res: Response) => {
 
 export const getUsers = catchAsync(async (req: Request, res: Response) => {
   const filter = pick(req.query, ['name', 'role']);
-  const options: IOptions = pick(req.query, ['sortBy', 'limit', 'page', 'projectBy']);
+  const options: PaginateOptions = pick(req.query, ['sortBy', 'limit', 'page', 'projectBy']);
   const result = await userService.queryUsers(filter, options);
   res.send(result);
 });

@@ -1,16 +1,14 @@
-import express, { Express } from 'express';
-import helmet from 'helmet';
-import ExpressMongoSanitize from 'express-mongo-sanitize';
 import compression from 'compression';
 import cors from 'cors';
-import passport from 'passport';
+import express, { Express } from 'express';
 import httpStatus from 'http-status';
+import passport from 'passport';
 
-import { authLimiter } from '@/shared/utils/index.js';
-import { ApiError, errorConverter, errorHandler } from '@/shared/utils/errors/index.js';
-import jwtStrategy from '@/shared/config/passport.js';
-import config from '@/shared/config/config.js';
 import routes from '@/routes/index.js';
+import config from '@/shared/config/config.js';
+import jwtStrategy from '@/shared/config/passport.js';
+import { ApiError, errorConverter, errorHandler } from '@/shared/utils/errors/index.js';
+import { authLimiter } from '@/shared/utils/index.js';
 
 const app: Express = express();
 

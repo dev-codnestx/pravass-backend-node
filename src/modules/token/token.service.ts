@@ -1,14 +1,15 @@
+import httpStatus from 'http-status';
 import jwt from 'jsonwebtoken';
 import moment, { Moment } from 'moment';
 import mongoose from 'mongoose';
-import httpStatus from 'http-status';
-
 
 import tokenTypes from '@/modules/token/token.types.js';
-import { getUserByEmail } from '../user/user.service.js';
-import ApiError from '@/shared/utils/errors/ApiError.js';
-import { IUserDoc } from '../user/user.interfaces.js';
 import config from '@/shared/config/config.js';
+import ApiError from '@/shared/utils/errors/ApiError.js';
+
+import { IUserDoc } from '../user/user.interfaces.js';
+import { getUserByEmail } from '../user/user.service.js';
+
 import { AccessAndRefreshTokens, IToken } from './token.interfaces.js';
 
 /**
@@ -48,23 +49,35 @@ export const verifyToken = async (token: string): Promise<IToken> => {
 /**
  * Generate auth tokens
  * @param {IUserDoc} user
- * @returns {Promise<AccessAndRefreshTokens>}
+ * @returns {ITokens}
  */
-export const generateAuthTokens = async (user: IUserDoc): Promise<AccessAndRefreshTokens> => {
-  const accessTokenExpires = moment().add(config.jwt.accessExpirationMinutes, 'minutes');
-  const accessToken = generateToken(user.id, accessTokenExpires, tokenTypes.ACCESS);
+export const generateAuthTokens = (user: IUserDoc): AccessAndRefreshTokens => {
+  const accessTokenExpires = config.jwt.accessExpirationMinutes * 60;
+  const refreshTokenExpires = config.jwt.refreshExpirationDays * 24 * 60 * 60;
 
-  const refreshTokenExpires = moment().add(config.jwt.refreshExpirationDays, 'days');
-  const refreshToken = generateToken(user.id, refreshTokenExpires, tokenTypes.REFRESH);
+  const payload = {
+    sub: user.id,
+    iat: Math.round(Date.now() / 1000),
+  };
+
+  const accessToken = jwt.sign(payload, config.jwt.secret, {
+    expiresIn: accessTokenExpires,
+    algorithm: 'HS256',
+  });
+
+  const refreshToken = jwt.sign(payload, config.jwt.secret, {
+    expiresIn: refreshTokenExpires,
+    algorithm: 'HS256',
+  });
 
   return {
     access: {
       token: accessToken,
-      expires: accessTokenExpires.toDate(),
+      expires: new Date(Date.now() + accessTokenExpires * 1000),
     },
     refresh: {
       token: refreshToken,
-      expires: refreshTokenExpires.toDate(),
+      expires: new Date(Date.now() + refreshTokenExpires * 1000),
     },
   };
 };
@@ -89,8 +102,8 @@ export const generateResetPasswordToken = async (email: string): Promise<string>
  * @param {IUserDoc} user
  * @returns {Promise<string>}
  */
-export const generateVerifyEmailToken = async (user: IUserDoc): Promise<string> => {
+export const generateVerifyEmailToken = (user: IUserDoc): Promise<string> => {
   const expires = moment().add(config.jwt.verifyEmailExpirationMinutes, 'minutes');
   const verifyEmailToken = generateToken(user.id, expires, tokenTypes.VERIFY_EMAIL);
-  return verifyEmailToken;
+  return Promise.resolve(verifyEmailToken);
 };
