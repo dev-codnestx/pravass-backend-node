@@ -1,0 +1,655 @@
+{
+	"info": {
+		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+		"name": "Travel Platform Auth API",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "travel-platform",
+		"_postman_variable_scope": "environment"
+	},
+	"item": [
+		{
+			"name": "Authentication",
+			"item": [
+				{
+					"name": "Panel Login",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"// Test if login was successful",
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    ",
+									"    // Store tokens in environment variables",
+									"    if (response.data && response.data.tokens) {",
+									"        pm.environment.set('access_token', response.data.tokens.accessToken);",
+									"        pm.environment.set('refresh_token', response.data.tokens.refreshToken);",
+									"        pm.environment.set('user_email', response.data.user.email);",
+									"        pm.environment.set('user_role', response.data.user.role.code);",
+									"        ",
+									"        // Set bearer token for subsequent requests",
+									"        pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.tokens.accessToken);",
+									"    }",
+									"    ",
+									"    pm.test('Login successful', () => {",
+									"        pm.expect(pm.response.code).to.eql(200);",
+									"        pm.expect(response.success).to.be.true;",
+									"        pm.expect(response.data).to.have.property('user');",
+									"        pm.expect(response.data).to.have.property('tokens');",
+									"        pm.expect(response.data.tokens).to.have.property('accessToken');",
+									"        pm.expect(response.data.tokens).to.have.property('refreshToken');",
+									"    });",
+									"} else {",
+									"    pm.test('Login failed with status: ' + pm.response.code, () => {",
+									"        pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@travelplatform.com\",\n  \"password\": \"Admin@123456\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/panel/login",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"panel",
+								"login"
+							]
+						},
+						"description": "Login to admin panel with email and password. Returns access token and refresh token."
+					},
+					"response": []
+				},
+				{
+					"name": "Get Current User",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Response has user data', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.data).to.have.property('user');",
+									"    pm.expect(response.data.user).to.have.property('email');",
+									"    pm.expect(response.data.user).to.have.property('role');",
+									"    pm.expect(response.data.user).to.have.property('permissions');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{bearer_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/me",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"me"
+							]
+						},
+						"description": "Get current authenticated user profile with role and permissions."
+					},
+					"response": []
+				},
+				{
+					"name": "Refresh Access Token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    const response = pm.response.json();",
+									"    ",
+									"    // Update access token in environment",
+									"    if (response.data && response.data.accessToken) {",
+									"        pm.environment.set('access_token', response.data.accessToken);",
+									"        pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.accessToken);",
+									"    }",
+									"    ",
+									"    pm.test('Token refreshed successfully', () => {",
+									"        pm.expect(pm.response.code).to.eql(200);",
+									"        pm.expect(response.success).to.be.true;",
+									"        pm.expect(response.data).to.have.property('accessToken');",
+									"    });",
+									"} else {",
+									"    pm.test('Token refresh failed', () => {",
+									"        pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
+									"    });",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/refresh",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"refresh"
+							]
+						},
+						"description": "Refresh access token using refresh token. Returns new access token."
+					},
+					"response": []
+				},
+				{
+					"name": "Forgot Password",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('OTP sent message', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.success).to.be.true;",
+									"    pm.expect(response.message).to.include('sent');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@travelplatform.com\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/forgot-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"forgot-password"
+							]
+						},
+						"description": "Send OTP to email for password reset. Returns success message even if email doesn't exist (security)."
+					},
+					"response": []
+				},
+				{
+					"name": "Reset Password with OTP",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status code is 200', () => {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test('Password reset successful', () => {",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.success).to.be.true;",
+									"    pm.expect(response.message).to.include('successful');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"email\": \"admin@travelplatform.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword@123\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/reset-password",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"reset-password"
+							]
+						},
+						"description": "Reset password using OTP received via email. Requires email, 6-digit OTP, and new password."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout Current Session",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Logout successful', () => {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.success).to.be.true;",
+									"    ",
+									"    // Clear tokens from environment",
+									"    pm.environment.unset('access_token');",
+									"    pm.environment.unset('refresh_token');",
+									"    pm.environment.unset('user_email');",
+									"    pm.environment.unset('user_role');",
+									"    pm.collectionVariables.unset('bearer_token');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/auth/logout",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"logout"
+							]
+						},
+						"description": "Logout from current session only. Requires refresh token to identify session."
+					},
+					"response": []
+				},
+				{
+					"name": "Logout All Devices",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Logout all devices successful', () => {",
+									"    pm.response.to.have.status(200);",
+									"    const response = pm.response.json();",
+									"    pm.expect(response.success).to.be.true;",
+									"    ",
+									"    // Clear tokens from environment",
+									"    pm.environment.unset('access_token');",
+									"    pm.environment.unset('refresh_token');",
+									"    pm.environment.unset('user_email');",
+									"    pm.environment.unset('user_role');",
+									"    pm.collectionVariables.unset('bearer_token');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{bearer_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/auth/logout-all",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"auth",
+								"logout-all"
+							]
+						},
+						"description": "Logout from all devices for the current user. Invalidates all refresh tokens."
+					},
+					"response": []
+				}
+			],
+			"description": "Authentication endpoints for admin panel access"
+		},
+		{
+			"name": "User Management",
+			"item": [
+				{
+					"name": "Get All Users",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{bearer_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users?page=1&limit=10",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							],
+							"query": [
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "limit",
+									"value": "10"
+								}
+							]
+						},
+						"description": "Get paginated list of users. Requires appropriate permissions."
+					},
+					"response": []
+				},
+				{
+					"name": "Create User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{bearer_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"password\": \"Password@123\",\n  \"roleId\": \"{{role_id}}\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users"
+							]
+						},
+						"description": "Create a new user. Requires manageUsers permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Get User by ID",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{bearer_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						},
+						"description": "Get specific user by ID. Requires getUsers permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Update User",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{bearer_token}}",
+								"type": "text"
+							},
+							{
+								"key": "Content-Type",
+								"value": "application/json",
+								"type": "text"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"fullName\": \"John Updated\",\n  \"phone\": \"+1234567891\"\n}",
+							"options": {
+								"raw": {
+									"language": "json"
+								}
+							}
+						},
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						},
+						"description": "Update user details. Requires manageUsers permission."
+					},
+					"response": []
+				},
+				{
+					"name": "Delete User",
+					"request": {
+						"method": "DELETE",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "{{bearer_token}}",
+								"type": "text"
+							}
+						],
+						"url": {
+							"raw": "{{base_url}}/users/{{user_id}}",
+							"host": [
+								"{{base_url}}"
+							],
+							"path": [
+								"users",
+								"{{user_id}}"
+							]
+						},
+						"description": "Delete a user. Requires manageUsers permission."
+					},
+					"response": []
+				}
+			],
+			"description": "User management endpoints with role-based permissions"
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Auto-refresh token if it's about to expire",
+					"if (pm.environment.get('access_token') && pm.environment.get('refresh_token')) {",
+					"    const token = pm.environment.get('access_token');",
+					"    try {",
+					"        const payload = JSON.parse(atob(token.split('.')[1]));",
+					"        const expirationTime = payload.exp * 1000;",
+					"        const currentTime = Date.now();",
+					"        ",
+					"        // Refresh if token expires within 5 minutes",
+					"        if (expirationTime - currentTime < 300000) {",
+					"            pm.sendRequest({",
+					"                url: pm.environment.get('base_url') + '/auth/refresh',",
+					"                method: 'POST',",
+					"                header: {",
+									"    'Content-Type': 'application/json'",
+								"},",
+									"body: {",
+									"    mode: 'raw',",
+									"    raw: JSON.stringify({",
+									"        refreshToken: pm.environment.get('refresh_token')",
+									"    })",
+									"}",
+									"}, function (err, res) {",
+									"    if (res && res.code === 200) {",
+									"        const response = res.json();",
+									"        pm.environment.set('access_token', response.data.accessToken);",
+									"        pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.accessToken);",
+									"    }",
+									"});",
+									"}",
+									"} catch (e) {",
+									"    console.log('Token refresh check failed');",
+									"}",
+									"}"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Log response for debugging",
+									"console.log('Response Status:', pm.response.code);",
+									"console.log('Response Time:', pm.response.responseTime);",
+									"if (pm.response.code >= 400) {",
+									"    console.log('Error Response:', pm.response.json());",
+									"}"
+								]
+							}
+						}
+					],
+					"variable": [
+						{
+							"key": "base_url",
+							"value": "http://localhost:3000",
+							"type": "string"
+						},
+						{
+							"key": "bearer_token",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "user_id",
+							"value": "",
+							"type": "string"
+						},
+						{
+							"key": "role_id",
+							"value": "",
+							"type": "string"
+						}
+					]
+				}

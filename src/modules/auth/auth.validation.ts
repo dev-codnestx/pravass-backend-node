@@ -55,3 +55,13 @@ export const verifyEmail = {
     token: Joi.string().required(),
   }),
 };
+
+export const authValidation = {
+  register,
+  login,
+  logout,
+  refreshToken: refreshTokens,
+  forgotPassword,
+  resetPassword,
+  verifyEmail,
+};

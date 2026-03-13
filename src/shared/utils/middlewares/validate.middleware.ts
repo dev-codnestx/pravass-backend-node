@@ -6,9 +6,7 @@ import ApiError from '@/shared/utils/errors/ApiError.js';
 import pick from '@/shared/utils/pick.js';
 
 const validate =
-  (
-    schema: Record<string, unknown>, //TODO: later specify correct type;
-  ) =>
+  (schema: Record<string, unknown>) =>
   (req: Request, _res: Response, next: NextFunction): void => {
     const validSchema = pick(schema, ['params', 'query', 'body']);
     const object = pick(req, Object.keys(validSchema));

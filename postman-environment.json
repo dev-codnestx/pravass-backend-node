@@ -1,0 +1,65 @@
+{
+	"id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+	"name": "Travel Platform - Development",
+	"values": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "default",
+			"enabled": true,
+			"description": "Base URL for the API server"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "secret",
+			"enabled": true,
+			"description": "JWT access token for authenticated requests"
+		},
+		{
+			"key": "refresh_token",
+			"value": "",
+			"type": "secret",
+			"enabled": true,
+			"description": "Refresh token for obtaining new access tokens"
+		},
+		{
+			"key": "bearer_token",
+			"value": "",
+			"type": "secret",
+			"enabled": true,
+			"description": "Bearer token in Authorization header format"
+		},
+		{
+			"key": "user_email",
+			"value": "",
+			"type": "default",
+			"enabled": true,
+			"description": "Current authenticated user email"
+		},
+		{
+			"key": "user_role",
+			"value": "",
+			"type": "default",
+			"enabled": true,
+			"description": "Current authenticated user role"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "default",
+			"enabled": true,
+			"description": "User ID for user management operations"
+		},
+		{
+			"key": "role_id",
+			"value": "",
+			"type": "default",
+			"enabled": true,
+			"description": "Role ID for user creation"
+		}
+	],
+	"_postman_variable_scope": "environment",
+	"_postman_exported_at": "2026-03-13T11:00:00.000Z",
+	"_postman_exported_using": "Postman/10.0.0"
+}

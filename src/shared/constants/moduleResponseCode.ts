@@ -4,17 +4,67 @@ export const baseResponseCodes = {
   ALREADY_EXISTS: 2,
   INVALID_FIELDS: 3,
   ERROR: 4,
-};
+  INVALID_CUSTOM_FIELDS: 5,
+  IN_USE: 6,
+} as const;
 
-export const entities = [
+export type BaseResponseCodeKey = keyof typeof baseResponseCodes;
+
+export interface EntityDefinition {
+  name: string;
+  customCodes?: string[];
+}
+
+export interface EntityWithKey extends EntityDefinition {
+  key: number;
+}
+
+const entitiesAndCustomCodes: EntityDefinition[] = [
+  {
+    name: 'Auth',
+    customCodes: ['PLEASE_AUTHENTICATE', 'INVALID_CREDENTIALS', 'ACCOUNT_NOT_ACTIVE'],
+  },
+  {
+    name: 'User',
+    customCodes: ['ACCOUNT_SUSPENDED', 'EMAIL_ALREADY_IN_USE', 'NUMBER_ALREADY_IN_USE', 'INVALID_INPUT'],
+  },
+  {
+    name: 'Role',
+  },
+  {
+    name: 'Permission',
+  },
+  {
+    name: 'Location',
+  },
   {
     name: 'Country',
-    key: 1000,
-    customCodes: ['COUNTRY_DISABLED', 'COUNTRY_IN_USE'],
   },
   {
     name: 'City',
-    key: 2000,
-    customCodes: ['CITY_IS_CAPITAL'],
+  },
+  {
+    name: 'Otp',
+  },
+  {
+    name: 'Token',
+  },
+  {
+    name: 'Session',
   },
 ];
+
+export const generateEntitiesWithKeys = (entities: EntityDefinition[]): EntityWithKey[] => {
+  let lastKey = 1000;
+
+  return entities.map((entity) => {
+    const entityWithKey: EntityWithKey = {
+      ...entity,
+      key: lastKey,
+    };
+    lastKey += 1000;
+    return entityWithKey;
+  });
+};
+
+export const entities = generateEntitiesWithKeys(entitiesAndCustomCodes);

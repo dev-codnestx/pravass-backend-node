@@ -9,6 +9,7 @@ import config from '@/shared/config/config.js';
 import jwtStrategy from '@/shared/config/passport.js';
 import { ApiError, errorConverter, errorHandler } from '@/shared/utils/errors/index.js';
 import { authLimiter } from '@/shared/utils/index.js';
+import { responseMiddleware } from '@/shared/utils/response.js';
 
 const app: Express = express();
 
@@ -31,6 +32,9 @@ app.use(express.urlencoded({ extended: true }));
 // gzip compression
 app.use(compression());
 
+// standard API response helpers
+app.use(responseMiddleware);
+
 // jwt authentication
 app.use(passport.initialize());
 passport.use('jwt', jwtStrategy);
@@ -39,12 +43,12 @@ passport.use('jwt', jwtStrategy);
 if (config.env === 'production') app.use('/v1/auth', authLimiter);
 
 app.get('/', (_req, res) => {
-  res.status(200).send('Welcome to the API!!');
+  res.success(null, 0, 'Welcome to the API!!');
 });
 
 // health check
 app.get('/health', (_req, res) => {
-  res.status(200).send('API is running!!');
+  res.success(null, 0, 'API is running!!');
 });
 
 // v1 api routes

@@ -1,43 +1,41 @@
-import { baseResponseCodes, entities } from '@/shared/constants/moduleResponseCode.js';
+import { baseResponseCodes, entities, EntityWithKey } from '@/shared/constants/moduleResponseCode.js';
 
-interface EntityDefinition {
-  name: string;
-  key: number;
-  customCodes?: string[];
-}
-
-interface EntityResponseCode {
-  KEY: number;
+type BaseResponseCodeMap = {
   SUCCESS: number;
-  [customCode: string]: number | undefined;
-}
-
-type ResponseCodesMap = {
-  [entityResponseName: string]: EntityResponseCode;
+  NOT_FOUND: number;
+  ALREADY_EXISTS: number;
+  INVALID_FIELDS: number;
+  ERROR: number;
+  INVALID_CUSTOM_FIELDS: number;
+  IN_USE: number;
 };
 
-const createResponseCodes = (entities: EntityDefinition[]): ResponseCodesMap => {
+type EntityResponseCode = BaseResponseCodeMap & {
+  KEY: number;
+} & Record<string, number>;
+
+type ResponseCodesMap = Record<string, EntityResponseCode>;
+
+const createResponseCodes = (entityDefinitions: EntityWithKey[]): ResponseCodesMap => {
   const responseCodes: ResponseCodesMap = {};
 
-  entities.forEach((entity) => {
-    const { name, key, customCodes = [] } = entity;
+  entityDefinitions.forEach(({ name, key, customCodes = [] }) => {
+    let currentKey = key + Object.keys(baseResponseCodes).length;
 
-    let currentKey = key;
     const entityResponseCodes: EntityResponseCode = {
-      KEY: currentKey,
-      SUCCESS: currentKey + baseResponseCodes.SUCCESS,
-      [`${name.toUpperCase()}_NOT_FOUND`]: currentKey + baseResponseCodes.NOT_FOUND,
-      [`${name.toUpperCase()}_ALREADY_EXISTS`]: currentKey + baseResponseCodes.ALREADY_EXISTS,
-      [`${name.toUpperCase()}_INVALID_FIELDS`]: currentKey + baseResponseCodes.INVALID_FIELDS,
-      [`${name.toUpperCase()}_ERROR`]: currentKey + baseResponseCodes.ERROR,
+      KEY: key,
+      SUCCESS: key + baseResponseCodes.SUCCESS,
+      NOT_FOUND: key + baseResponseCodes.NOT_FOUND,
+      ALREADY_EXISTS: key + baseResponseCodes.ALREADY_EXISTS,
+      INVALID_FIELDS: key + baseResponseCodes.INVALID_FIELDS,
+      ERROR: key + baseResponseCodes.ERROR,
+      INVALID_CUSTOM_FIELDS: key + baseResponseCodes.INVALID_CUSTOM_FIELDS,
+      IN_USE: key + baseResponseCodes.IN_USE,
     };
 
-    // Increment the key for the next custom code
-    currentKey += Object.keys(baseResponseCodes).length;
-
-    customCodes.forEach((customKey) => {
-      entityResponseCodes[customKey] = currentKey;
-      currentKey++;
+    customCodes.forEach((customCode) => {
+      entityResponseCodes[customCode] = currentKey;
+      currentKey += 1;
     });
 
     responseCodes[`${name}ResponseCodes`] = entityResponseCodes;

@@ -1,105 +1,99 @@
-import bcrypt from 'bcryptjs';
-import mongoose from 'mongoose';
-import validator from 'validator';
-
+import { Schema, model, Document, Types } from 'mongoose';
+import {
+  passwordHashingMiddleware,
+  comparePasswordMethod,
+  incrementFailedAttempts,
+  resetFailedAttempts,
+  generateOTP,
+  verifyOTP,
+} from '@/shared/utils/common/model.utils.js';
+import { sanitizeUser } from '@/shared/utils/common/auth.utils.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
+import { IUserModel } from './user.interfaces.js';
 
-import { IUserDoc, IUserModel } from './user.interfaces.js';
+export interface IUser extends Document {
+  fullName: string;
+  email: string;
+  phone?: string;
+  passwordHash: string;
+  password?: string;
+  name?: string;
+  roleId: Types.ObjectId;
+  status: 'active' | 'inactive' | 'locked';
+  isEmailVerified: boolean;
+  lastLoginAt?: Date;
+  failedLoginAttempts: number;
+  mustChangePassword: boolean;
+  twoFactorEnabled: boolean;
+  refreshTokenVersion: number;
+  createdAt: Date;
+  updatedAt: Date;
+  isPasswordMatch(candidatePassword: string): Promise<boolean>;
+  incrementFailedAttempts(maxAttempts?: number): Promise<boolean>;
+  resetFailedAttempts(): Promise<void>;
+  generateOTP(channel: 'email' | 'sms', purpose: string, OtpModel: any): Promise<string>;
+  verifyOTP(channel: 'email' | 'sms', purpose: string, code: string, OtpModel: any): Promise<boolean>;
+}
 
-const userSchema = new mongoose.Schema<IUserDoc, IUserModel>(
+const userSchema = new Schema<IUser>(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      lowercase: true,
-    },
+    fullName: { type: String, required: true, trim: true },
     email: {
       type: String,
       required: true,
-      unique: true,
-      trim: true,
+      unique: true, // Automatically creates index
       lowercase: true,
-      validate(value: string) {
-        if (!validator.isEmail(value)) throw new Error('Invalid email');
-      },
-    },
-    password: {
-      type: String,
-      required: true,
       trim: true,
-      minlength: 8,
-      validate(value: string) {
-        if (!value.match(/\d/) || !value.match(/[a-zA-Z]/))
-          throw new Error('Password must contain at least one letter and one number');
-      },
-      private: true, // used by the toJSON plugin
+      set: (val: string) => val.toLowerCase().trim(),
     },
-
-    isEmailVerified: {
-      type: Boolean,
-      default: false,
-    },
-    phoneNumber: {
-      dialCode: {
-        type: Number,
-        required: true,
-      },
-      phone: {
-        type: Number,
-        required: true,
-      },
-    },
-
+    phone: { type: String, trim: true },
+    passwordHash: { type: String, required: true, select: false },
+    roleId: { type: Schema.Types.ObjectId, ref: 'Role', required: true, index: true },
     status: {
       type: String,
-      enum: ['active', 'inActive'],
+      enum: ['active', 'inactive', 'locked'],
       default: 'active',
+      index: true,
     },
-    createdBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
-    updatedBy: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User',
-    },
+    isEmailVerified: { type: Boolean, default: false },
+    lastLoginAt: { type: Date },
+    failedLoginAttempts: { type: Number, default: 0 },
+    mustChangePassword: { type: Boolean, default: false },
+    twoFactorEnabled: { type: Boolean, default: false },
+    refreshTokenVersion: { type: Number, default: 0 },
   },
   {
     timestamps: true,
+    toJSON: { virtuals: true, transform: (_, ret) => sanitizeUser(ret) },
   },
 );
 
-// add plugin that converts mongoose to json
 userSchema.plugin(toJSON);
 userSchema.plugin(paginate);
 
-/**
- * Check if email is taken
- * @param {string} email - The user's email
- * @param {ObjectId} [excludeUserId] - The id of the user to be excluded
- * @returns {Promise<boolean>}
- */
-userSchema.static('isEmailTaken', async function (email: string, excludeUserId: mongoose.ObjectId): Promise<boolean> {
-  const user = await this.findOne({ email, _id: { $ne: excludeUserId.toString() } });
-  return Boolean(user);
-});
+// Virtuals
+userSchema
+  .virtual('password')
+  .get(function (this: IUser) {
+    return this.passwordHash;
+  })
+  .set(function (this: IUser, value: string) {
+    this.passwordHash = value;
+  });
 
-/**
- * Check if password matches the user's password
- * @param {string} password
- * @returns {Promise<boolean>}
- */
-userSchema.method('isPasswordMatch', async function (password: string): Promise<boolean | void> {
-  const user = this;
-  return bcrypt.compare(password, user.password);
-});
+// Bind Methods
+userSchema.pre('save', passwordHashingMiddleware);
+userSchema.methods.isPasswordMatch = comparePasswordMethod;
+userSchema.methods.incrementFailedAttempts = incrementFailedAttempts;
+userSchema.methods.resetFailedAttempts = resetFailedAttempts;
+userSchema.methods.generateOTP = generateOTP;
+userSchema.methods.verifyOTP = verifyOTP;
 
-userSchema.pre('save', async function () {
-  const user = this;
-  if (user.isModified('password')) user.password = await bcrypt.hash(user.password, 8);
-});
+// Statics
+userSchema.statics.isEmailTaken = async function (email: string, excludeUserId?: Types.ObjectId) {
+  const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
+  return !!user;
+};
 
-const User = mongoose.model<IUserDoc, IUserModel>('User', userSchema);
-
-export default User;
+export const UserModel = model<IUser, IUserModel>('User', userSchema);
+export default UserModel;
