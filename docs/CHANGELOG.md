@@ -113,12 +113,6 @@ build before starting. FRONT_URL has been replaced with FRONTEND_URL as it is mo
 ## [2.0.0](https://github.com/saisilinus/node-express-mongoose-typescript-boilerplate/compare/v1.1.0...v2.0.0) (2022-04-26)
 
 
-### ⚠ BREAKING CHANGES
-
-* **components.yaml:** swagger routes have to use the new components.yaml path i.e.
-packages/components.yaml
-* auth/refresh-token api will return user alongside access token and refresh token
-
 ### Features
 
 * add hot reloading ([8a11c8a](https://github.com/saisilinus/node-express-mongoose-typescript-boilerplate/commit/8a11c8a6c529f542b7af2c20978605dd3214162a)), closes [#12](https://github.com/saisilinus/node-express-mongoose-typescript-boilerplate/issues/12)

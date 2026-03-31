@@ -1,4 +1,28 @@
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
+#!/usr/bin/env sh
+set -eu
 
-npm install
+prev_ref="${1:-}"
+new_ref="${2:-}"
+is_branch_checkout="${3:-0}"
+
+is_zero_ref() {
+  [ "$1" = "0000000000000000000000000000000000000000" ]
+}
+
+if [ "$is_branch_checkout" != "1" ]; then
+  exit 0
+fi
+
+# Fresh refs can happen in some checkout flows; install to stay safe.
+if [ -z "$prev_ref" ] || [ -z "$new_ref" ] || is_zero_ref "$prev_ref" || is_zero_ref "$new_ref"; then
+  echo "Branch switch detected. Installing dependencies..."
+  npm install --no-audit --no-fund
+  exit 0
+fi
+
+if git diff --name-only "$prev_ref" "$new_ref" | grep -Eq '^(package\.json|package-lock\.json)$'; then
+  echo "Dependency files changed between branches. Installing dependencies..."
+  npm install --no-audit --no-fund
+else
+  echo "No dependency changes detected. Skipping npm install."
+fi

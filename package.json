@@ -10,6 +10,7 @@
     "node": ">=23.11.0"
   },
   "scripts": {
+    "setup": "sh scripts/setup.sh",
     "start": "pm2 start ecosystem.config.json --no-daemon",
     "start:build": "tsup && pm2 start ecosystem.config.json --no-daemon",
     "start-stage:build": "tsup && pm2 start ecosystem.stage.config.json --no-daemon",
@@ -19,13 +20,11 @@
     "dev": "cross-env NODE_ENV=development npx tsx watch --require tsconfig-paths/register src/index.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
+    "typecheck": "tsc --noEmit",
     "prettier": "prettier --check **/*.ts",
     "prettier:fix": "prettier --write **/*.ts",
     "seed": "cross-env NODE_ENV=development npx tsx --require tsconfig-paths/register src/seeders/index.ts",
     "seed:prod": "cross-env NODE_ENV=production npx tsx --require tsconfig-paths/register src/seeders/index.ts",
-    "docker:prod": "docker-compose -f docker-compose.yml -f docker-compose.prod.yml up",
-    "docker:dev": "docker-compose -f docker-compose.yml -f docker-compose.dev.yml up",
-    "docker:test": "docker-compose -f docker-compose.yml -f docker-compose.test.yml up",
     "prepare": "husky install"
   },
   "keywords": [
@@ -43,7 +42,6 @@
     "es7",
     "es8",
     "es9",
-    "docker",
     "passport",
     "joi",
     "eslint",
@@ -110,7 +108,7 @@
     "winston": "^3.19.0"
   },
   "lint-staged": {
-    "**/*.{js,ts}": [
+    "*.{js,ts,tsx}": [
       "eslint --fix",
       "prettier --write"
     ]

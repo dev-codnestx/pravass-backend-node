@@ -13,8 +13,3 @@ coverage
 
 # build folder
 dist
-
-# docker volume
-data
-
-package-lock.json

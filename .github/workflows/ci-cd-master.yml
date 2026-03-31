@@ -1,0 +1,214 @@
+name: CI/CD for Master Branch
+
+on:
+  push:
+    branches:
+      - master
+      - release/sprint-*
+      - development
+      - develop
+  create:
+    branches:
+      - "**"
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  enforce-branch-naming:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check branch name
+        env:
+          BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$BRANCH_NAME" != feature/* && "$BRANCH_NAME" != bugfix/* && "$BRANCH_NAME" != hotfix/* && "$BRANCH_NAME" != release/* && "$BRANCH_NAME" != master && "$BRANCH_NAME" != development && "$BRANCH_NAME" != develop ]]; then
+            echo "Invalid branch name: $BRANCH_NAME"
+            echo "Branch names must start with feature/, bugfix/, hotfix/, release/ or be master/development/develop."
+            exit 1
+          fi
+
+          echo "Branch name is valid: $BRANCH_NAME"
+
+  prevent-direct-push:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+
+    steps:
+      - name: Block direct push to protected branches
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+          PUSHER_NAME: ${{ github.event.pusher.name }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$BRANCH_NAME" == "master" || "$BRANCH_NAME" == "development" || "$BRANCH_NAME" == "develop" || "$BRANCH_NAME" == release/* ]]; then
+            if [[ "$PUSHER_NAME" != "web-flow" && "$PUSHER_NAME" != "github-actions[bot]" ]]; then
+              echo "Direct push to $BRANCH_NAME is not allowed."
+              echo "Create a PR and merge through GitHub."
+              exit 1
+            fi
+          fi
+
+          echo "Push policy passed for branch: $BRANCH_NAME"
+
+  validate-commit-message:
+    runs-on: ubuntu-latest
+    if: github.event_name != 'create'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Get latest message
+        run: |
+          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "MESSAGE=${{ github.event.pull_request.title }}" >> "$GITHUB_ENV"
+          else
+            echo "MESSAGE=$(git log -1 --pretty=format:%s)" >> "$GITHUB_ENV"
+          fi
+
+      - name: Check commit message format
+        run: |
+          set -euo pipefail
+
+          if [[ ! "$MESSAGE" =~ ^(feat|style|fix|refactor|chore)(\([a-zA-Z0-9._/-]+\))?:\ .+ ]]; then
+            echo "Invalid message: $MESSAGE"
+            echo "Message must start with feat:, style:, fix:, refactor:, or chore: (scope is optional)."
+            exit 1
+          fi
+
+          echo "Commit/PR message is valid: $MESSAGE"
+
+  enforce-changelog-policy:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate changelog update policy
+        env:
+          TARGET_BRANCH: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+
+          git fetch origin "$TARGET_BRANCH" --depth=1
+
+          CHANGED_FILES="$(git diff --name-only "origin/$TARGET_BRANCH"...HEAD)"
+          CHANGELOG_CHANGED="false"
+
+          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^docs/CHANGELOG\.md$'; then
+            CHANGELOG_CHANGED="true"
+          fi
+
+          if [[ "$TARGET_BRANCH" == master || "$TARGET_BRANCH" == release/sprint-* ]]; then
+            if [[ "$CHANGELOG_CHANGED" != "true" ]]; then
+              echo "docs/CHANGELOG.md must be updated for PRs targeting $TARGET_BRANCH."
+              exit 1
+            fi
+            echo "Changelog policy passed: changelog updated for $TARGET_BRANCH."
+            exit 0
+          fi
+
+          if [[ "$CHANGELOG_CHANGED" == "true" ]]; then
+            echo "Do not update docs/CHANGELOG.md for PRs targeting $TARGET_BRANCH."
+            echo "Update changelog only when PR target is release/sprint-* or master."
+            exit 1
+          fi
+
+          echo "Changelog policy passed: no changelog update needed for $TARGET_BRANCH."
+
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    needs: [enforce-branch-naming, prevent-direct-push, validate-commit-message]
+    if: github.event_name == 'push' && success()
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Add server host key
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H "${{ secrets.SERVER_IP }}" >> ~/.ssh/known_hosts
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        id: setup-node
+        with:
+          node-version-file: ".nvmrc"
+          cache: "npm"
+
+      - name: Verify Node and npm cache
+        run: |
+          echo "cache-hit=${{ steps.setup-node.outputs.cache-hit }}"
+          echo "expected-node=$(cat .nvmrc)"
+          echo "current-node=$(node -v)"
+          echo "npm-version=$(npm -v)"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build project
+        run: npm run compile
+
+      - name: Deploy to server
+        env:
+          BRANCH_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          ssh -o StrictHostKeyChecking=yes "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}" \
+            BRANCH_NAME="$BRANCH_NAME" \
+            APP_PATH="${{ secrets.SERVER_APP_PATH }}" \
+            PM2_PROCESS_NAME="${{ secrets.PM2_PROCESS_NAME }}" \
+            'bash -s' <<'EOF'
+              set -euo pipefail
+
+              export NVM_DIR="$HOME/.nvm"
+              [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+              if command -v nvm >/dev/null 2>&1; then
+                nvm use --lts >/dev/null 2>&1 || true
+              fi
+
+              cd "$APP_PATH"
+              git fetch origin
+              git checkout "$BRANCH_NAME"
+              git reset --hard "origin/$BRANCH_NAME"
+              git clean -fd
+
+              npm ci
+              npm run compile
+
+              pm2 reload "$PM2_PROCESS_NAME" --update-env || pm2 start ecosystem.stage.config.json --only "$PM2_PROCESS_NAME"
+
+              HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:3000/health}"
+              echo "Running smoke check on $HEALTHCHECK_URL"
+              for attempt in 1 2 3 4 5; do
+                if curl -fsS "$HEALTHCHECK_URL" >/dev/null; then
+                  echo "Smoke check passed."
+                  break
+                fi
+                if [ "$attempt" -eq 5 ]; then
+                  echo "Smoke check failed after 5 attempts."
+                  exit 1
+                fi
+                sleep 5
+              done
+
+              echo "Deployment successful."
+          EOF

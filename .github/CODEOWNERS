@@ -1,0 +1,11 @@
+# Default owner for the whole backend repository.
+* @codnestx
+
+# CI/CD and project governance
+/.github/ @codnestx
+
+# Source code and runtime behavior
+/src/ @codnestx
+
+# Team-facing documentation
+/docs/ @codnestx
