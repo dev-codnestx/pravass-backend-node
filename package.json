@@ -1,5 +1,5 @@
 {
-  "name": "brainstax",
+  "name": "pravass-backend-node",
   "version": "3.0.11",
   "description": "Node express mongoose typescript boilerplate",
   "main": "dist/index.js",
@@ -21,6 +21,7 @@
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --ext .ts --fix",
     "typecheck": "tsc --noEmit",
+    "typecheck:safe": "tsc --noEmit -p tsconfig.strict-safety.json",
     "prettier": "prettier --check **/*.ts",
     "prettier:fix": "prettier --write **/*.ts",
     "seed": "cross-env NODE_ENV=development npx tsx --require tsconfig-paths/register src/seeders/index.ts",

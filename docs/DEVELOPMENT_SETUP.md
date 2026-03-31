@@ -12,9 +12,15 @@ npm run dev
 ```
 
 `npm run setup` does:
+- Auto-sets `package.json` `name` (from folder name) when current name is boilerplate default
 - `npm install --no-audit --no-fund`
 - `npm run prepare` (installs Husky hooks)
 - Creates `.env.dev` from `.env.example` if missing
+
+Optional override:
+```bash
+PROJECT_NAME=my-backend-service npm run setup
+```
 
 ## Lockfile Policy
 
@@ -109,5 +115,8 @@ npm run dev
 npm run lint
 npm run lint:fix
 npm run typecheck
+npm run typecheck:safe
 npm run compile
 ```
+
+`typecheck:safe` enables stricter null/optional safety checks using `tsconfig.strict-safety.json`.
