@@ -51,9 +51,10 @@ export const verifyToken = async (token: string): Promise<IPayload> => {
  * @param {IUserDoc} user
  * @returns {ITokens}
  */
-export const generateAuthTokens = (user: IUserDoc): AccessAndRefreshTokens => {
+export const generateAuthTokens = (user: IUserDoc, remember = false): AccessAndRefreshTokens => {
   const accessTokenExpires = config.jwt.accessExpirationMinutes * 60;
-  const refreshTokenExpires = config.jwt.refreshExpirationDays * 24 * 60 * 60;
+  const refreshDays = remember ? config.jwt.refreshExpirationDays : config.jwt.refreshExpirationSessionDays;
+  const refreshTokenExpires = refreshDays * 24 * 60 * 60;
 
   const basePayload = {
     sub: user._id,
@@ -65,7 +66,7 @@ export const generateAuthTokens = (user: IUserDoc): AccessAndRefreshTokens => {
     algorithm: 'HS256',
   });
 
-  const refreshToken = jwt.sign({ ...basePayload, type: tokenTypes.REFRESH }, config.jwt.secret, {
+  const refreshToken = jwt.sign({ ...basePayload, type: tokenTypes.REFRESH, remember }, config.jwt.secret, {
     expiresIn: refreshTokenExpires,
     algorithm: 'HS256',
   });

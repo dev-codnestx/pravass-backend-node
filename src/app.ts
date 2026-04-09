@@ -1,4 +1,5 @@
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import express, { Express } from 'express';
 import httpStatus from 'http-status';
@@ -17,7 +18,12 @@ const app: Express = express();
 // app.use(helmet());
 
 // enable cors
-app.use(cors());
+app.use(
+  cors({
+    origin: true, // Allow all origins conditionally or specify frontend URL (e.g., config.frontendUrl)
+    credentials: true,
+  }),
+);
 // app.options('*', cors());
 
 // parse json request body
@@ -25,6 +31,9 @@ app.use(express.json());
 
 // parse urlencoded request body
 app.use(express.urlencoded({ extended: true }));
+
+// parse cookies
+app.use(cookieParser());
 
 // sanitize request data
 // app.use(ExpressMongoSanitize());

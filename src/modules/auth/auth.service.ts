@@ -61,7 +61,7 @@ export const refreshAuth = async (refreshToken: string): Promise<IUserWithTokens
     const user = await getUserById(new mongoose.Types.ObjectId(refreshTokenDoc.sub));
     if (!user) throw new Error();
 
-    const tokens = await generateAuthTokens(user);
+    const tokens = await generateAuthTokens(user, Boolean(refreshTokenDoc.remember));
     return { user, tokens };
   } catch (_error) {
     throw new ApiError(

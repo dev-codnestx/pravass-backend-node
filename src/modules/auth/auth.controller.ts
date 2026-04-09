@@ -4,33 +4,55 @@ import httpStatus from 'http-status';
 import { sendResetPasswordEmail, sendVerificationMail } from '@/shared/email/email.service.js';
 import catchAsync from '@/shared/utils/catchAsync.js';
 import responseCodes from '@/shared/utils/responseCode/responseCode.js';
+import config from '@/shared/config/config.js';
 
 import { tokenService } from '../token/index.js';
 import { userService } from '../user/index.js';
 import { authService } from './index.js';
 
+const setAuthCookies = (res: Response, tokens: any) => {
+  const cookieOptions = {
+    httpOnly: true,
+    secure: config.env === 'production',
+    sameSite: 'strict' as const,
+  };
+  res.cookie('token', tokens.access.token, { ...cookieOptions, expires: new Date(tokens.access.expires) });
+  res.cookie('refreshToken', tokens.refresh.token, { ...cookieOptions, expires: new Date(tokens.refresh.expires) });
+};
+
+const clearAuthCookies = (res: Response) => {
+  res.clearCookie('token');
+  res.clearCookie('refreshToken');
+};
+
 export const register = catchAsync(async (req: Request, res: Response) => {
   const user = await userService.registerUser(req.body);
   const tokens = await tokenService.generateAuthTokens(user);
+  setAuthCookies(res, tokens);
   res
     .status(httpStatus.CREATED)
     .success({ user, tokens }, responseCodes.AuthResponseCodes.SUCCESS, 'User registered successfully');
 });
 
 export const login = catchAsync(async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, password, remember = false } = req.body;
   const user = await authService.loginUserWithEmailAndPassword(email, password);
-  const tokens = await tokenService.generateAuthTokens(user);
+  const tokens = await tokenService.generateAuthTokens(user, Boolean(remember));
+  setAuthCookies(res, tokens);
   res.success({ user, tokens }, responseCodes.AuthResponseCodes.SUCCESS, 'Login successful');
 });
 
 export const logout = catchAsync(async (req: Request, res: Response) => {
-  await authService.logout(req.body.refreshToken);
+  await authService.logout(req.body.refreshToken || req.cookies.refreshToken);
+  clearAuthCookies(res);
   res.success(null, responseCodes.AuthResponseCodes.SUCCESS, 'Logout successful');
 });
 
 export const refreshTokens = catchAsync(async (req: Request, res: Response) => {
-  const userWithTokens = await authService.refreshAuth(req.body.refreshToken);
+  const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
+  const userWithTokens = await authService.refreshAuth(refreshToken);
+  if ((userWithTokens as any).tokens) setAuthCookies(res, (userWithTokens as any).tokens);
+
   res.success(userWithTokens, responseCodes.AuthResponseCodes.SUCCESS, 'Tokens refreshed successfully');
 });
 
@@ -54,11 +76,13 @@ export const sendVerificationEmail = catchAsync(async (req: Request, res: Respon
 export const verifyEmail = catchAsync(async (req: Request, res: Response) => {
   const user = await authService.verifyEmail(req.query['token'] as string);
   const tokens = await tokenService.generateAuthTokens(user);
+  setAuthCookies(res, tokens);
   res.success({ user, tokens }, responseCodes.AuthResponseCodes.SUCCESS, 'Email verified successfully');
 });
 
 export const logoutAll = catchAsync(async (req: Request, res: Response) => {
   await authService.logoutAll(req.user);
+  clearAuthCookies(res);
   res.success(null, responseCodes.AuthResponseCodes.SUCCESS, 'Logout from all devices successful');
 });
 
