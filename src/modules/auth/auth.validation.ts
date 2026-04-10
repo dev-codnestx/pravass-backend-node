@@ -26,13 +26,13 @@ export const login = {
 
 export const logout = {
   body: Joi.object().keys({
-    refreshToken: Joi.string().required(),
+    refreshToken: Joi.string().optional(),
   }),
 };
 
 export const refreshTokens = {
   body: Joi.object().keys({
-    refreshToken: Joi.string().required(),
+    refreshToken: Joi.string().optional(),
   }),
 };
 

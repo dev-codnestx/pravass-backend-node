@@ -30,6 +30,13 @@ const createMasterSchema = (extraFields: Record<string, unknown> = {}) => {
 const locationSchema = createMasterSchema({
   type: { type: String, trim: true },
   code: { type: String, trim: true },
+  description: { type: String, trim: true },
+  image: { type: String, trim: true },
+  displayOrder: { type: Number, min: 0 },
+  continentId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  countryId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  regionId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  stateId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
 });
 
 const destinationSchema = createMasterSchema({

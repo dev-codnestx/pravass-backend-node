@@ -1,214 +1,178 @@
-name: CI/CD for Master Branch
+name: CI/CD Pipeline
+run-name: CI/CD • ${{ github.event_name }} • ${{ github.ref_name }}
 
 on:
   push:
     branches:
       - master
-      - release/sprint-*
       - development
-      - develop
+      - "release/sprint-*"
   create:
     branches:
       - "**"
   pull_request:
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ci-cd-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   enforce-branch-naming:
     runs-on: ubuntu-latest
-
     steps:
       - name: Check branch name
         env:
           BRANCH_NAME: ${{ github.head_ref || github.ref_name }}
         run: |
-          set -euo pipefail
-
-          if [[ "$BRANCH_NAME" != feature/* && "$BRANCH_NAME" != bugfix/* && "$BRANCH_NAME" != hotfix/* && "$BRANCH_NAME" != release/* && "$BRANCH_NAME" != master && "$BRANCH_NAME" != development && "$BRANCH_NAME" != develop ]]; then
+          if [[ ! "$BRANCH_NAME" =~ ^(feature|bugfix|hotfix|release)/[a-z0-9]+([._-][a-z0-9]+)*$ ]] && [[ "$BRANCH_NAME" != "master" ]] && [[ "$BRANCH_NAME" != "development" ]]; then
             echo "Invalid branch name: $BRANCH_NAME"
-            echo "Branch names must start with feature/, bugfix/, hotfix/, release/ or be master/development/develop."
+            echo "Branch names must start with: feature/, bugfix/, hotfix/, release/"
+            echo "Allowed long-lived branches: master, development"
             exit 1
           fi
-
           echo "Branch name is valid: $BRANCH_NAME"
 
   prevent-direct-push:
     runs-on: ubuntu-latest
     if: github.event_name == 'push'
-
     steps:
       - name: Block direct push to protected branches
-        env:
-          BRANCH_NAME: ${{ github.ref_name }}
-          PUSHER_NAME: ${{ github.event.pusher.name }}
         run: |
-          set -euo pipefail
-
-          if [[ "$BRANCH_NAME" == "master" || "$BRANCH_NAME" == "development" || "$BRANCH_NAME" == "develop" || "$BRANCH_NAME" == release/* ]]; then
-            if [[ "$PUSHER_NAME" != "web-flow" && "$PUSHER_NAME" != "github-actions[bot]" ]]; then
-              echo "Direct push to $BRANCH_NAME is not allowed."
-              echo "Create a PR and merge through GitHub."
-              exit 1
-            fi
+          if [[ "$GITHUB_REF" == "refs/heads/master" || "$GITHUB_REF" == "refs/heads/development" ]]; then
+            echo "Direct push to master or development is not allowed."
+            exit 1
           fi
-
-          echo "Push policy passed for branch: $BRANCH_NAME"
+          echo "Push target is allowed: $GITHUB_REF"
 
   validate-commit-message:
     runs-on: ubuntu-latest
-    if: github.event_name != 'create'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Get latest message
-        run: |
-          if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-            echo "MESSAGE=${{ github.event.pull_request.title }}" >> "$GITHUB_ENV"
-          else
-            echo "MESSAGE=$(git log -1 --pretty=format:%s)" >> "$GITHUB_ENV"
-          fi
-
-      - name: Check commit message format
-        run: |
-          set -euo pipefail
-
-          if [[ ! "$MESSAGE" =~ ^(feat|style|fix|refactor|chore)(\([a-zA-Z0-9._/-]+\))?:\ .+ ]]; then
-            echo "Invalid message: $MESSAGE"
-            echo "Message must start with feat:, style:, fix:, refactor:, or chore: (scope is optional)."
-            exit 1
-          fi
-
-          echo "Commit/PR message is valid: $MESSAGE"
-
-  enforce-changelog-policy:
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          fetch-depth: 2
 
-      - name: Validate changelog update policy
-        env:
-          TARGET_BRANCH: ${{ github.base_ref }}
+      - name: Get last commit message
+        run: echo "MESSAGE=$(git log -1 --pretty=format:'%s')" >> "$GITHUB_ENV"
+
+      - name: Check commit message format
         run: |
-          set -euo pipefail
-
-          git fetch origin "$TARGET_BRANCH" --depth=1
-
-          CHANGED_FILES="$(git diff --name-only "origin/$TARGET_BRANCH"...HEAD)"
-          CHANGELOG_CHANGED="false"
-
-          if printf '%s\n' "$CHANGED_FILES" | grep -Eq '^docs/CHANGELOG\.md$'; then
-            CHANGELOG_CHANGED="true"
-          fi
-
-          if [[ "$TARGET_BRANCH" == master || "$TARGET_BRANCH" == release/sprint-* ]]; then
-            if [[ "$CHANGELOG_CHANGED" != "true" ]]; then
-              echo "docs/CHANGELOG.md must be updated for PRs targeting $TARGET_BRANCH."
-              exit 1
-            fi
-            echo "Changelog policy passed: changelog updated for $TARGET_BRANCH."
-            exit 0
-          fi
-
-          if [[ "$CHANGELOG_CHANGED" == "true" ]]; then
-            echo "Do not update docs/CHANGELOG.md for PRs targeting $TARGET_BRANCH."
-            echo "Update changelog only when PR target is release/sprint-* or master."
+          if [[ ! "$MESSAGE" =~ ^(feat|style|fix|refactor|chore)(\([a-z0-9._/-]+\))?!?:\ .+ ]]; then
+            echo "Invalid commit message: $MESSAGE"
+            echo "Commit message must start with: feat:, style:, fix:, refactor:, or chore:"
             exit 1
           fi
+          echo "Commit message is valid: $MESSAGE"
 
-          echo "Changelog policy passed: no changelog update needed for $TARGET_BRANCH."
-
-  build-and-deploy:
+  verify:
     runs-on: ubuntu-latest
-    needs: [enforce-branch-naming, prevent-direct-push, validate-commit-message]
-    if: github.event_name == 'push' && success()
-
+    needs: [enforce-branch-naming, validate-commit-message]
+    if: github.ref_name == 'master' || startsWith(github.ref_name, 'release/sprint-')
+    environment:
+      name: ${{ github.ref_name == 'master' && 'production' || 'staging' }}
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Configure SSH key
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: '.nvmrc'
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          npm ci --no-audit --no-fund
+
+      - name: Build
+        run: npm run compile
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [enforce-branch-naming, validate-commit-message, verify]
+    if: github.event_name == 'push' && (github.ref_name == 'master' || startsWith(github.ref_name, 'release/sprint-'))
+    environment:
+      name: ${{ github.ref_name == 'master' && 'production' || 'staging' }}
+    env:
+      BRANCH_NAME: ${{ github.ref_name }}
+      SERVER_USER: ${{ secrets.SERVER_USER }}
+      SERVER_IP: ${{ secrets.SERVER_IP }}
+      DEPLOY_PATH: ${{ vars.DEPLOY_PATH || secrets.SERVER_APP_PATH }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure SSH agent
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Add server host key
+      - name: Validate deployment configuration
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H "${{ secrets.SERVER_IP }}" >> ~/.ssh/known_hosts
+          if [[ -z "$SERVER_USER" || -z "$SERVER_IP" || -z "$DEPLOY_PATH" ]]; then
+            echo "Missing deployment configuration."
+            echo "Required secrets: SERVER_USER, SERVER_IP, SSH_PRIVATE_KEY"
+            echo "Required repository variable: DEPLOY_PATH (fallback: secret SERVER_APP_PATH)"
+            exit 1
+          fi
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        id: setup-node
-        with:
-          node-version-file: ".nvmrc"
-          cache: "npm"
-
-      - name: Verify Node and npm cache
-        run: |
-          echo "cache-hit=${{ steps.setup-node.outputs.cache-hit }}"
-          echo "expected-node=$(cat .nvmrc)"
-          echo "current-node=$(node -v)"
-          echo "npm-version=$(npm -v)"
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build project
-        run: npm run compile
+      - name: Add server to known hosts
+        run: ssh-keyscan -H "$SERVER_IP" >> ~/.ssh/known_hosts
 
       - name: Deploy to server
-        env:
-          BRANCH_NAME: ${{ github.ref_name }}
         run: |
-          set -euo pipefail
+          ssh "$SERVER_USER@$SERVER_IP" "BRANCH_NAME='$BRANCH_NAME' DEPLOY_PATH='$DEPLOY_PATH' bash -s" <<'EOSSH'
+            set -eu
 
-          ssh -o StrictHostKeyChecking=yes "${{ secrets.SERVER_USER }}@${{ secrets.SERVER_IP }}" \
-            BRANCH_NAME="$BRANCH_NAME" \
-            APP_PATH="${{ secrets.SERVER_APP_PATH }}" \
-            PM2_PROCESS_NAME="${{ secrets.PM2_PROCESS_NAME }}" \
-            'bash -s' <<'EOF'
-              set -euo pipefail
+            export NVM_DIR="$HOME/.nvm"
+            if [ -s "$NVM_DIR/nvm.sh" ]; then
+              . "$NVM_DIR/nvm.sh"
+            fi
 
-              export NVM_DIR="$HOME/.nvm"
-              [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-              if command -v nvm >/dev/null 2>&1; then
-                nvm use --lts >/dev/null 2>&1 || true
-              fi
+            cd "$DEPLOY_PATH"
+            git fetch --prune origin
+            git reset --hard "origin/$BRANCH_NAME"
+            git clean -fd
 
-              cd "$APP_PATH"
-              git fetch origin
-              git checkout "$BRANCH_NAME"
-              git reset --hard "origin/$BRANCH_NAME"
-              git clean -fd
+            npm ci
+            npm run compile
 
-              npm ci
-              npm run compile
+            if [ "$BRANCH_NAME" = "master" ]; then
+              ECOSYSTEM_FILE="ecosystem.config.json"
+              LEGACY_PM2_NAME="app"
+            elif [[ "$BRANCH_NAME" == release/sprint-* ]]; then
+              ECOSYSTEM_FILE="ecosystem.stage.config.json"
+              LEGACY_PM2_NAME="makanfy-backend"
+            else
+              echo "Unsupported deploy branch: $BRANCH_NAME"
+              exit 1
+            fi
 
-              pm2 reload "$PM2_PROCESS_NAME" --update-env || pm2 start ecosystem.stage.config.json --only "$PM2_PROCESS_NAME"
+            if [ ! -f "$ECOSYSTEM_FILE" ]; then
+              echo "Missing ecosystem file: $ECOSYSTEM_FILE"
+              exit 1
+            fi
 
-              HEALTHCHECK_URL="${HEALTHCHECK_URL:-http://127.0.0.1:3000/health}"
-              echo "Running smoke check on $HEALTHCHECK_URL"
-              for attempt in 1 2 3 4 5; do
-                if curl -fsS "$HEALTHCHECK_URL" >/dev/null; then
-                  echo "Smoke check passed."
-                  break
-                fi
-                if [ "$attempt" -eq 5 ]; then
-                  echo "Smoke check failed after 5 attempts."
-                  exit 1
-                fi
-                sleep 5
-              done
+            PM2_TARGET_NAME="$(node -e 'const fs=require("fs"); const file=process.argv[1]; const cfg=JSON.parse(fs.readFileSync(file, "utf8")); const name=cfg?.apps?.[0]?.name; if(!name){process.exit(2)} process.stdout.write(name);' "$ECOSYSTEM_FILE")"
 
-              echo "Deployment successful."
-          EOF
+            if [ -z "$PM2_TARGET_NAME" ]; then
+              echo "Could not resolve PM2 process name from $ECOSYSTEM_FILE"
+              exit 1
+            fi
+
+            echo "Deploying PM2 app '$PM2_TARGET_NAME' using $ECOSYSTEM_FILE..."
+
+            if pm2 describe "$PM2_TARGET_NAME" >/dev/null 2>&1; then
+              pm2 reload "$PM2_TARGET_NAME" --update-env
+            elif [ -n "$LEGACY_PM2_NAME" ] && pm2 describe "$LEGACY_PM2_NAME" >/dev/null 2>&1; then
+              echo "Migrating PM2 process name from '$LEGACY_PM2_NAME' to '$PM2_TARGET_NAME'..."
+              pm2 delete "$LEGACY_PM2_NAME" || true
+              pm2 start "$ECOSYSTEM_FILE" --only "$PM2_TARGET_NAME"
+            else
+              pm2 start "$ECOSYSTEM_FILE" --only "$PM2_TARGET_NAME"
+            fi
+
+            pm2 save
+            echo "Deployment successful for $PM2_TARGET_NAME."
+          EOSSH

@@ -10,19 +10,32 @@ import { tokenService } from '../token/index.js';
 import { userService } from '../user/index.js';
 import { authService } from './index.js';
 
+const cookieSameSite: 'none' | 'lax' = config.env === 'production' ? 'none' : 'lax';
+
+const authCookieOptions = {
+  httpOnly: true,
+  secure: config.env === 'production',
+  sameSite: cookieSameSite,
+  path: '/',
+};
+
+const getRefreshTokenFromRequest = (req: Request): string | undefined =>
+  (req.body?.refreshToken as string | undefined) || req.cookies?.refreshToken;
+
 const setAuthCookies = (res: Response, tokens: any) => {
-  const cookieOptions = {
-    httpOnly: true,
-    secure: config.env === 'production',
-    sameSite: 'strict' as const,
-  };
-  res.cookie('token', tokens.access.token, { ...cookieOptions, expires: new Date(tokens.access.expires) });
-  res.cookie('refreshToken', tokens.refresh.token, { ...cookieOptions, expires: new Date(tokens.refresh.expires) });
+  res.cookie('token', tokens.access.token, {
+    ...authCookieOptions,
+    expires: new Date(tokens.access.expires),
+  });
+  res.cookie('refreshToken', tokens.refresh.token, {
+    ...authCookieOptions,
+    expires: new Date(tokens.refresh.expires),
+  });
 };
 
 const clearAuthCookies = (res: Response) => {
-  res.clearCookie('token');
-  res.clearCookie('refreshToken');
+  res.clearCookie('token', authCookieOptions);
+  res.clearCookie('refreshToken', authCookieOptions);
 };
 
 export const register = catchAsync(async (req: Request, res: Response) => {
@@ -43,14 +56,16 @@ export const login = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const logout = catchAsync(async (req: Request, res: Response) => {
-  await authService.logout(req.body.refreshToken || req.cookies.refreshToken);
+  const refreshToken = getRefreshTokenFromRequest(req);
+  if (refreshToken) await authService.logout(refreshToken);
+
   clearAuthCookies(res);
   res.success(null, responseCodes.AuthResponseCodes.SUCCESS, 'Logout successful');
 });
 
 export const refreshTokens = catchAsync(async (req: Request, res: Response) => {
-  const refreshToken = req.body.refreshToken || req.cookies.refreshToken;
-  const userWithTokens = await authService.refreshAuth(refreshToken);
+  const refreshToken = getRefreshTokenFromRequest(req);
+  const userWithTokens = await authService.refreshAuth(refreshToken || '');
   if ((userWithTokens as any).tokens) setAuthCookies(res, (userWithTokens as any).tokens);
 
   res.success(userWithTokens, responseCodes.AuthResponseCodes.SUCCESS, 'Tokens refreshed successfully');
