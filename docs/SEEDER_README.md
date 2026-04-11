@@ -5,7 +5,9 @@ This directory contains database seeding scripts for the travel platform backend
 ## Available Seeders
 
 ### Role Seeder
+
 Creates default roles with predefined permissions:
+
 - **SUPER_ADMIN**: Full access to all modules and actions
 - **ADMIN**: Create, read, update, publish access to all modules
 - **MANAGER**: Read, update, publish access to all modules
@@ -13,18 +15,22 @@ Creates default roles with predefined permissions:
 - **VIEWER**: Read-only access to all modules
 
 ### User Seeder
+
 Creates admin users:
-- **Super Admin**: `admin@travelplatform.com` (password from env or default)
+
+- **Super Admin**: `admin@pravass.com` (password from env or default)
 - **Demo Users**: Various roles for testing (password from env or default)
 
 ## Usage
 
 ### Development Environment
+
 ```bash
 npm run seed
 ```
 
 ### Production Environment
+
 ```bash
 npm run seed:prod
 ```
@@ -32,16 +38,19 @@ npm run seed:prod
 ## Environment Variables
 
 ### Super Admin Credentials
+
 ```bash
 SUPER_ADMIN_PASSWORD=YourSecurePassword123
 ```
 
 ### Demo User Credentials
+
 ```bash
 DEMO_USER_PASSWORD=DemoPassword123
 ```
 
 If not provided, default passwords will be used:
+
 - Super Admin: `Admin@123456`
 - Demo Users: `Demo@123456`
 
@@ -56,20 +65,21 @@ The seeder uses the same database configuration as the main application. Ensure 
    - Updates existing roles with current permission set
 
 2. **Super Admin User** (if not exist)
-   - Email: `admin@travelplatform.com`
+   - Email: `admin@pravass.com`
    - Role: SUPER_ADMIN
    - Status: Active
    - Must change password on first login
 
 3. **Demo Users** (if not exist)
    - `admin@demo.com` - ADMIN role
-   - `manager@demo.com` - MANAGER role  
+   - `manager@demo.com` - MANAGER role
    - `sales@demo.com` - SALES_EXEC role
    - `viewer@demo.com` - VIEWER role
 
 ## Security Notes
 
-⚠️ **Important**: 
+⚠️ **Important**:
+
 - Change the default passwords immediately after first login
 - The super admin user has full system access
 - Demo users are for development/testing only
@@ -78,6 +88,7 @@ The seeder uses the same database configuration as the main application. Ensure 
 ## Running Seeder
 
 The seeder can be run multiple times safely:
+
 - Existing roles are updated with current permissions
 - Existing users are not overwritten (except role updates)
 - No duplicate data is created
@@ -107,11 +118,12 @@ To clear all data before seeding, uncomment the `clearDatabase()` call in `src/s
 ### Logs
 
 The seeder provides detailed console output:
+
 - 🚀 Starting database seeding...
 - 🌱 Seeding roles...
 - ✅ Created role: SUPER_ADMIN
 - 🌱 Seeding super admin user...
-- ✅ Created super admin user: admin@travelplatform.com
+- ✅ Created super admin user: admin@pravass.com
 - 🔑 Default password: Admin@123456
 - ⚠️ Please change default password after first login!
 - ✅ Database seeding completed successfully!

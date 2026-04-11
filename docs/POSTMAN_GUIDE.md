@@ -32,7 +32,8 @@ npm run seed
 ```
 
 This will create:
-- Super Admin: `admin@travelplatform.com` / `Admin@123456`
+
+- Super Admin: `admin@pravass.com` / `Admin@123456`
 - Demo users for each role
 
 ## 🔐 Authentication Flow
@@ -43,18 +44,20 @@ This will create:
 
 ```json
 {
-  "email": "admin@travelplatform.com",
+  "email": "admin@pravass.com",
   "password": "Admin@123456"
 }
 ```
 
 **What happens**:
+
 - Returns access token and refresh token
 - Automatically stores tokens in environment variables
 - Sets up `bearer_token` for subsequent requests
 - Stores user information (email, role)
 
 **Test Results**:
+
 - ✅ Login successful (200)
 - ❌ Login failed (400/401/403)
 
@@ -63,6 +66,7 @@ This will create:
 **Request**: `GET /auth/me` (with Authorization header)
 
 **What happens**:
+
 - Uses the stored `bearer_token`
 - Returns user profile with role and permissions
 - Validates that authentication is working
@@ -70,6 +74,7 @@ This will create:
 ### Step 3: Token Refresh (Automatic)
 
 The collection includes automatic token refresh logic:
+
 - Checks if token expires within 5 minutes
 - Automatically refreshes using refresh token
 - Updates environment variables with new token
@@ -78,25 +83,25 @@ The collection includes automatic token refresh logic:
 
 ### Authentication Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/auth/panel/login` | Login to admin panel | ❌ |
-| GET | `/auth/me` | Get current user profile | ✅ |
-| POST | `/auth/refresh` | Refresh access token | ❌ |
-| POST | `/auth/logout` | Logout current session | ❌ |
-| POST | `/auth/logout-all` | Logout all devices | ✅ |
-| POST | `/auth/forgot-password` | Send password reset OTP | ❌ |
-| POST | `/auth/reset-password` | Reset password with OTP | ❌ |
+| Method | Endpoint                | Description              | Auth Required |
+| ------ | ----------------------- | ------------------------ | ------------- |
+| POST   | `/auth/panel/login`     | Login to admin panel     | ❌            |
+| GET    | `/auth/me`              | Get current user profile | ✅            |
+| POST   | `/auth/refresh`         | Refresh access token     | ❌            |
+| POST   | `/auth/logout`          | Logout current session   | ❌            |
+| POST   | `/auth/logout-all`      | Logout all devices       | ✅            |
+| POST   | `/auth/forgot-password` | Send password reset OTP  | ❌            |
+| POST   | `/auth/reset-password`  | Reset password with OTP  | ❌            |
 
 ### User Management Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/users` | Get paginated users list | ✅ |
-| POST | `/users` | Create new user | ✅ |
-| GET | `/users/{id}` | Get user by ID | ✅ |
-| PATCH | `/users/{id}` | Update user | ✅ |
-| DELETE | `/users/{id}` | Delete user | ✅ |
+| Method | Endpoint      | Description              | Auth Required |
+| ------ | ------------- | ------------------------ | ------------- |
+| GET    | `/users`      | Get paginated users list | ✅            |
+| POST   | `/users`      | Create new user          | ✅            |
+| GET    | `/users/{id}` | Get user by ID           | ✅            |
+| PATCH  | `/users/{id}` | Update user              | ✅            |
+| DELETE | `/users/{id}` | Delete user              | ✅            |
 
 ## 🔧 Password Reset Flow
 
@@ -106,7 +111,7 @@ The collection includes automatic token refresh logic:
 
 ```json
 {
-  "email": "admin@travelplatform.com"
+  "email": "admin@pravass.com"
 }
 ```
 
@@ -118,7 +123,7 @@ The collection includes automatic token refresh logic:
 
 ```json
 {
-  "email": "admin@travelplatform.com",
+  "email": "admin@pravass.com",
   "otp": "123456",
   "newPassword": "NewPassword@123"
 }
@@ -153,7 +158,7 @@ The collection includes automatic token refresh logic:
 
 Test with different user roles:
 
-1. **Super Admin** (`admin@travelplatform.com`):
+1. **Super Admin** (`admin@pravass.com`):
    - Full access to all endpoints
 
 2. **Admin** (`admin@demo.com`):
@@ -170,16 +175,16 @@ Test with different user roles:
 
 ## 🛠️ Environment Variables
 
-| Variable | Type | Description |
-|----------|------|-------------|
-| `base_url` | string | API server URL (default: http://localhost:3000) |
-| `access_token` | secret | JWT access token |
-| `refresh_token` | secret | Refresh token for token rotation |
-| `bearer_token` | secret | "Bearer " + access_token |
-| `user_email` | string | Current authenticated user email |
-| `user_role` | string | Current authenticated user role |
-| `user_id` | string | User ID for user operations |
-| `role_id` | string | Role ID for user creation |
+| Variable        | Type   | Description                                     |
+| --------------- | ------ | ----------------------------------------------- |
+| `base_url`      | string | API server URL (default: http://localhost:3000) |
+| `access_token`  | secret | JWT access token                                |
+| `refresh_token` | secret | Refresh token for token rotation                |
+| `bearer_token`  | secret | "Bearer " + access_token                        |
+| `user_email`    | string | Current authenticated user email                |
+| `user_role`     | string | Current authenticated user role                 |
+| `user_id`       | string | User ID for user operations                     |
+| `role_id`       | string | Role ID for user creation                       |
 
 ## 🔍 Test Scripts
 
@@ -193,21 +198,23 @@ Each request includes test scripts that:
 ## 📝 Sample Test Results
 
 ### Successful Login Test
+
 ```javascript
 pm.test('Login successful', () => {
-    pm.expect(pm.response.code).to.eql(200);
-    pm.expect(response.success).to.be.true;
-    pm.expect(response.data).to.have.property('user');
-    pm.expect(response.data).to.have.property('tokens');
+  pm.expect(pm.response.code).to.eql(200);
+  pm.expect(response.success).to.be.true;
+  pm.expect(response.data).to.have.property('user');
+  pm.expect(response.data).to.have.property('tokens');
 });
 ```
 
 ### Token Management
+
 ```javascript
 if (response.data && response.data.tokens) {
-    pm.environment.set('access_token', response.data.tokens.accessToken);
-    pm.environment.set('refresh_token', response.data.tokens.refreshToken);
-    pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.tokens.accessToken);
+  pm.environment.set('access_token', response.data.tokens.accessToken);
+  pm.environment.set('refresh_token', response.data.tokens.refreshToken);
+  pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.tokens.accessToken);
 }
 ```
 
@@ -243,17 +250,20 @@ if (response.data && response.data.tokens) {
 ## 🔄 Customization
 
 ### Update Base URL
+
 1. Go to Environment variables
 2. Edit `base_url` to match your server
 3. Save changes
 
 ### Add Custom Tests
+
 1. Select a request
 2. Go to "Tests" tab
 3. Add custom JavaScript tests
 4. Save collection
 
 ### Modify Request Bodies
+
 1. Select a request
 2. Go to "Body" tab
 3. Edit JSON as needed
@@ -262,6 +272,7 @@ if (response.data && response.data.tokens) {
 ## 📚 API Documentation
 
 For detailed API documentation, refer to:
+
 - Swagger/OpenAPI specs (when implemented)
 - Code comments in controller files
 - Response examples in test scripts

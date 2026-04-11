@@ -3,6 +3,7 @@
 ## ✅ Completed Implementation
 
 ### 1. Core Models
+
 - **Permission Constants** (`src/modules/permissions/permission.constants.ts`)
   - Defined 13 modules: dashboard, masters, tours, deals, blogs, crm, customers, careers, support, testimonials, reports, banners, settings
   - Defined 6 actions: create, read, update, delete, publish, export
@@ -29,6 +30,7 @@
   - Auto-expiration with TTL index
 
 ### 2. Authentication Service
+
 - **Core Auth Functions** (`src/modules/auth/auth.service.ts`)
   - Password hashing with bcrypt
   - JWT access token generation
@@ -43,6 +45,7 @@
   - Permission checking types
 
 ### 3. Authentication Controller
+
 - **Auth Endpoints** (`src/modules/auth/auth.controller.ts`)
   - `POST /auth/panel/login` - Admin panel login
   - `POST /auth/refresh` - Token refresh
@@ -63,6 +66,7 @@
   - Proper error handling
 
 ### 4. Authorization Middleware
+
 - **Auth Middleware** (`src/modules/auth/auth.middleware.ts`)
   - JWT token verification
   - Role-based authorization (`requireRole`)
@@ -70,6 +74,7 @@
   - Enhanced Request interface with user payload
 
 ### 5. Database Seeder
+
 - **Role Seeder** (`src/seeders/role.seeder.ts`)
   - Creates 5 default roles with proper permissions
   - Updates existing roles with current permission set
@@ -87,6 +92,7 @@
   - Proper error handling and logging
 
 ### 6. Package Scripts
+
 - **Seeder Scripts**
   - `npm run seed` - Development seeding
   - `npm run seed:prod` - Production seeding
@@ -95,6 +101,7 @@
 ## 🔐 Security Features
 
 ### Authentication
+
 - **JWT Access Tokens**: 15-minute expiration
 - **Refresh Tokens**: 7-30 day expiration with rotation
 - **Password Hashing**: bcrypt with cost 12
@@ -102,12 +109,14 @@
 - **OTP System**: Secure password reset flow
 
 ### Authorization
+
 - **RBAC**: Role-based access control
 - **Module Permissions**: Granular action-based permissions
 - **Permission Inheritance**: SUPER_ADMIN has all permissions
 - **API Protection**: Middleware-based route protection
 
 ### Security Headers
+
 - **Token Validation**: Proper JWT verification
 - **Rate Limiting**: Ready for implementation
 - **Audit Trail**: User action logging ready
@@ -116,6 +125,7 @@
 ## 🚀 Usage
 
 ### Running Seeder
+
 ```bash
 # Development
 npm run seed
@@ -125,18 +135,20 @@ npm run seed:prod
 ```
 
 ### Default Credentials
-- **Super Admin**: `admin@travelplatform.com` / `Admin@123456`
+
+- **Super Admin**: `admin@pravass.com` / `Admin@123456`
 - **Demo Admin**: `admin@demo.com` / `Demo@123456`
 - **Demo Manager**: `manager@demo.com` / `Demo@123456`
 - **Demo Sales**: `sales@demo.com` / `Demo@123456`
 - **Demo Viewer**: `viewer@demo.com` / `Demo@123456`
 
 ### API Endpoints
+
 ```bash
 # Login
 POST /auth/panel/login
 {
-  "email": "admin@travelplatform.com",
+  "email": "admin@pravass.com",
   "password": "Admin@123456"
 }
 
@@ -152,6 +164,7 @@ POST /auth/refresh
 ```
 
 ## 📁 File Structure
+
 ```
 src/
 ├── modules/
@@ -184,12 +197,14 @@ src/
 ## 🔄 Next Steps
 
 ### Immediate
+
 1. **Fix TypeScript Linting**: Resolve remaining validation middleware type issues
 2. **Add to Main Router**: Include auth routes in main app router
 3. **Environment Variables**: Set up proper .env configuration
 4. **Email Service**: Implement actual email sending for OTP
 
 ### Enhancement
+
 1. **Two-Factor Auth**: Add TOTP support
 2. **Rate Limiting**: Implement brute-force protection
 3. **Audit Logging**: Add comprehensive action logging

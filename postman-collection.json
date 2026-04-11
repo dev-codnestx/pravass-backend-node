@@ -61,7 +61,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@travelplatform.com\",\n  \"password\": \"Admin@123456\"\n}",
+							"raw": "{\n  \"email\": \"admin@pravass.com\",\n  \"password\": \"Admin@123456\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -224,7 +224,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@travelplatform.com\"\n}",
+							"raw": "{\n  \"email\": \"admin@pravass.com\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -277,7 +277,7 @@
 						],
 						"body": {
 							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@travelplatform.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword@123\"\n}",
+							"raw": "{\n  \"email\": \"admin@pravass.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword@123\"\n}",
 							"options": {
 								"raw": {
 									"language": "json"
@@ -592,64 +592,64 @@
 					"                url: pm.environment.get('base_url') + '/auth/refresh',",
 					"                method: 'POST',",
 					"                header: {",
-									"    'Content-Type': 'application/json'",
-								"},",
-									"body: {",
-									"    mode: 'raw',",
-									"    raw: JSON.stringify({",
-									"        refreshToken: pm.environment.get('refresh_token')",
-									"    })",
-									"}",
-									"}, function (err, res) {",
-									"    if (res && res.code === 200) {",
-									"        const response = res.json();",
-									"        pm.environment.set('access_token', response.data.accessToken);",
-									"        pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.accessToken);",
-									"    }",
-									"});",
-									"}",
-									"} catch (e) {",
-									"    console.log('Token refresh check failed');",
-									"}",
-									"}"
-								]
-							}
-						},
-						{
-							"listen": "test",
-							"script": {
-								"type": "text/javascript",
-								"exec": [
-									"// Log response for debugging",
-									"console.log('Response Status:', pm.response.code);",
-									"console.log('Response Time:', pm.response.responseTime);",
-									"if (pm.response.code >= 400) {",
-									"    console.log('Error Response:', pm.response.json());",
-									"}"
-								]
-							}
-						}
-					],
-					"variable": [
-						{
-							"key": "base_url",
-							"value": "http://localhost:3000",
-							"type": "string"
-						},
-						{
-							"key": "bearer_token",
-							"value": "",
-							"type": "string"
-						},
-						{
-							"key": "user_id",
-							"value": "",
-							"type": "string"
-						},
-						{
-							"key": "role_id",
-							"value": "",
-							"type": "string"
-						}
-					]
-				}
+					"    'Content-Type': 'application/json'",
+					"},",
+					"body: {",
+					"    mode: 'raw',",
+					"    raw: JSON.stringify({",
+					"        refreshToken: pm.environment.get('refresh_token')",
+					"    })",
+					"}",
+					"}, function (err, res) {",
+					"    if (res && res.code === 200) {",
+					"        const response = res.json();",
+					"        pm.environment.set('access_token', response.data.accessToken);",
+					"        pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.accessToken);",
+					"    }",
+					"});",
+					"}",
+					"} catch (e) {",
+					"    console.log('Token refresh check failed');",
+					"}",
+					"}"
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Log response for debugging",
+					"console.log('Response Status:', pm.response.code);",
+					"console.log('Response Time:', pm.response.responseTime);",
+					"if (pm.response.code >= 400) {",
+					"    console.log('Error Response:', pm.response.json());",
+					"}"
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://localhost:3000",
+			"type": "string"
+		},
+		{
+			"key": "bearer_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "user_id",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "role_id",
+			"value": "",
+			"type": "string"
+		}
+	]
+}

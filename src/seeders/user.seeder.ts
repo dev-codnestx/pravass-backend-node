@@ -10,14 +10,14 @@ export const seedSuperAdmin = async (): Promise<void> => {
   const superAdminRole = await RoleModel.findOne({ code: 'SUPER_ADMIN' });
   if (!superAdminRole) throw new Error('SUPER_ADMIN role not found. Please run role seeder first.');
 
-  const existingSuperAdmin = await UserModel.findOne({ email: 'admin@travelplatform.com' });
+  const existingSuperAdmin = await UserModel.findOne({ email: 'admin@pravass.com' });
 
   if (!existingSuperAdmin) {
     const defaultPassword = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123456';
 
     const superAdmin = await UserModel.create({
       fullName: 'Super Administrator',
-      email: 'admin@travelplatform.com',
+      email: 'admin@pravass.com',
       phone: '+1234567890',
       passwordHash: defaultPassword,
       roleId: superAdminRole._id,
@@ -35,7 +35,7 @@ export const seedSuperAdmin = async (): Promise<void> => {
   } else {
     // Update super admin to ensure it has SUPER_ADMIN role
     await UserModel.updateOne(
-      { email: 'admin@travelplatform.com' },
+      { email: 'admin@pravass.com' },
       {
         $set: {
           roleId: superAdminRole._id,
