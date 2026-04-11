@@ -1,7 +1,7 @@
 {
   "apps": [
     {
-      "name": "makanfy-backend",
+      "name": "pravass-backend-stage",
       "script": "./dist/index.js",
       "node_args": "--enable-source-maps",
       "interpreter": "node",

@@ -20,18 +20,19 @@ export const login = {
   body: Joi.object().keys({
     email: Joi.string().required(),
     password: Joi.string().required(),
+    remember: Joi.boolean().optional(),
   }),
 };
 
 export const logout = {
   body: Joi.object().keys({
-    refreshToken: Joi.string().required(),
+    refreshToken: Joi.string().optional(),
   }),
 };
 
 export const refreshTokens = {
   body: Joi.object().keys({
-    refreshToken: Joi.string().required(),
+    refreshToken: Joi.string().optional(),
   }),
 };
 
