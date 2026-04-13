@@ -4,3 +4,6 @@ export * as customValidation from '@/shared/validations/custom.validation.js';
 
 // Master validation
 export * as locationValidation from '@/modules/location/location.validation.js';
+
+// Banner validation
+export * as bannerValidation from '@/modules/banner/banner.validation.js';

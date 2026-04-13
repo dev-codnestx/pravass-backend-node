@@ -179,8 +179,8 @@ const paginate = <T extends Document>(schema: Schema<T>): void => {
             }
           });
         }
-        doc.id = doc._id;
-        delete doc._id;
+        // doc.id = doc._id;
+        // delete doc._id;
         return doc;
       });
 
@@ -250,7 +250,7 @@ const paginate = <T extends Document>(schema: Schema<T>): void => {
               }
             });
 
-        plainDoc.id = plainDoc._id;
+        // plainDoc.id = plainDoc._id;
         return plainDoc;
       });
 

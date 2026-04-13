@@ -1,8 +1,10 @@
 import express, { Router } from 'express';
 
 import authRoute from '@/modules/auth/auth.route.js';
+import bannerRoute from '@/modules/banner/banner.route.js';
 import mastersRoute from '@/modules/masters/masters.route.js';
 import userRoute from '@/modules/user/user.route.js';
+import supportRoute from '@/modules/support/support.route.js';
 
 const router = express.Router();
 
@@ -24,6 +26,14 @@ const setupRoutes = () => {
     {
       path: '/masters',
       route: mastersRoute,
+    },
+    {
+      path: '/banners',
+      route: bannerRoute,
+    },
+    {
+      path: '/support',
+      route: supportRoute,
     },
   ];
 
