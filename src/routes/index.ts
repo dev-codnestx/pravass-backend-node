@@ -1,6 +1,8 @@
 import express, { Router } from 'express';
 
 import authRoute from '@/modules/auth/auth.route.js';
+import blogRoute from '@/modules/blog/blog.route.js';
+import faqRoute from '@/modules/faq/faq.route.js';
 import mastersRoute from '@/modules/masters/masters.route.js';
 import userRoute from '@/modules/user/user.route.js';
 
@@ -24,6 +26,14 @@ const setupRoutes = () => {
     {
       path: '/masters',
       route: mastersRoute,
+    },
+    {
+      path: '/blogs',
+      route: blogRoute,
+    },
+    {
+      path: '/faqs',
+      route: faqRoute,
     },
   ];
 
