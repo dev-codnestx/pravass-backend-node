@@ -20,7 +20,7 @@ const app: Express = express();
 // enable cors
 app.use(
   cors({
-    origin: true, // Allow all origins conditionally or specify frontend URL (e.g., config.frontendUrl)
+    origin: config.clientUrl, // Use specific client URL from config
     credentials: true,
   }),
 );

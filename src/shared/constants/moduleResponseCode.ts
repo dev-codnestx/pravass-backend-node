@@ -67,6 +67,9 @@ const entitiesAndCustomCodes: EntityDefinition[] = [
   {
     name: 'Application',
   },
+  {
+    name: 'Banner',
+  },
 ];
 
 export const generateEntitiesWithKeys = (entities: EntityDefinition[]): EntityWithKey[] => {
