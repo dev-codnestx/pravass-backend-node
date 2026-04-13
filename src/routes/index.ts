@@ -2,6 +2,8 @@ import express, { Router } from 'express';
 
 import authRoute from '@/modules/auth/auth.route.js';
 import blogRoute from '@/modules/blog/blog.route.js';
+import applicationRoute from '@/modules/careers/application.route.js';
+import jobRoute from '@/modules/careers/job.route.js';
 import faqRoute from '@/modules/faq/faq.route.js';
 import mastersRoute from '@/modules/masters/masters.route.js';
 import userRoute from '@/modules/user/user.route.js';
@@ -34,6 +36,14 @@ const setupRoutes = () => {
     {
       path: '/faqs',
       route: faqRoute,
+    },
+    {
+      path: '/jobs',
+      route: jobRoute,
+    },
+    {
+      path: '/applications',
+      route: applicationRoute,
     },
   ];
 

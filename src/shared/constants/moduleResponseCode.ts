@@ -60,6 +60,13 @@ const entitiesAndCustomCodes: EntityDefinition[] = [
     name: 'Faq',
     customCodes: ['QUESTION_ALREADY_EXISTS'],
   },
+  {
+    name: 'Job',
+    customCodes: ['TITLE_ALREADY_EXISTS'],
+  },
+  {
+    name: 'Application',
+  },
 ];
 
 export const generateEntitiesWithKeys = (entities: EntityDefinition[]): EntityWithKey[] => {
