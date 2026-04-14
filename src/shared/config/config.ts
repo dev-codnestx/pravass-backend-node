@@ -44,6 +44,7 @@ const envVarsSchema = Joi.object()
     FAST_2_SMS_SENDER_ID: Joi.string().allow('').optional().description('Fast2SMS sender id'),
     FAST_2_SMS_MSG_ID: Joi.string().allow('').optional().description('Fast2SMS message id'),
     FAST_2_SMS_ROUTE: Joi.string().allow('').optional().description('Fast2SMS route'),
+    ADMIN_FRONTEND_URL: Joi.string().required().description('Admin Client url'),
   })
   .unknown();
 
@@ -86,6 +87,7 @@ const config = {
     from: envVars.EMAIL_FROM,
   },
   clientUrl: envVars.FRONTEND_URL,
+  adminClientUrl: envVars.ADMIN_FRONTEND_URL,
 
   // AWS configuration
   aws: {
