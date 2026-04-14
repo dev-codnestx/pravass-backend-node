@@ -46,6 +46,7 @@ const setupRoutes = () => {
       path: '/upload',
       route: s3Route,
     },
+    {
       path: '/blogs',
       route: blogRoute,
     },
