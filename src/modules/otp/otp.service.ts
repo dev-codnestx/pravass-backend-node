@@ -22,8 +22,7 @@ export type OtpSessionResult = {
   devOtpHint?: string;
 };
 
-const shouldExposeDevOtp = (phone?: string, email?: string): boolean =>
-  Boolean(phone && isDummyIdentifier('phone', phone)) || Boolean(email && isDummyIdentifier('email', email));
+const shouldExposeDevOtp = (_phone?: string, _email?: string): boolean => false;
 
 export const sendOtp = async (phone?: number | string, dialCode?: number, email?: string): Promise<OtpSessionResult> => {
   if (!phone && !email)
@@ -46,7 +45,7 @@ export const sendOtp = async (phone?: number | string, dialCode?: number, email?
         console.info(`[OTP] Dummy phone bypassed for ${phoneStr}. OrderId: ${orderId}. OTP: ${otpCode}`);
       else await sendPhoneOtp(phoneStr, otpCode, dialCode);
 
-      await saveOtp({ phone: Number(phoneStr), dialCode: dialCode || 91 }, otpCode, orderId);
+      await saveOtp({ phone: Number(phoneStr), phoneNumber: Number(phoneStr), dialCode: dialCode || 91 }, otpCode, orderId);
     }
 
     if (email) {
@@ -79,9 +78,9 @@ export const resendOtp = async (orderId: string): Promise<OtpSessionResult> => {
   if (!doc) throw new ApiError(defaultStatus.OK, 'OTP session expired', undefined, true, '', OtpResponseCodes.OTP_NOT_FOUND);
 
   try {
-    await Otp.deleteMany({ $or: [{ phone: doc.phone }, { email: doc.email }] });
+    await Otp.deleteMany({ $or: [{ phone: doc.phone }, { phoneNumber: doc.phoneNumber }, { email: doc.email }] });
 
-    return sendOtp(doc.phone, doc.dialCode, doc.email);
+    return sendOtp(doc.phone ?? doc.phoneNumber, doc.dialCode, doc.email);
   } catch (_err) {
     throw new ApiError(defaultStatus.OK, 'Failed to resend OTP', undefined, true, '', OtpResponseCodes.FAILED_TO_RESEND_OTP);
   }
@@ -97,7 +96,12 @@ export const verifyOtp = async (userBody: OtpPayload): Promise<boolean> => {
     if (!otpRecord)
       throw new ApiError(defaultStatus.OK, 'OTP expired or not found', undefined, true, '', OtpResponseCodes.OTP_EXPIRED);
 
-    if (otpRecord.otp !== otp)
+    const otpTarget = String(otpRecord.phone ?? otpRecord.phoneNumber ?? otpRecord.email ?? '');
+    const isDummyOtpTarget =
+      ((otpRecord.phone != null || otpRecord.phoneNumber != null) && isDummyIdentifier('phone', otpTarget)) ||
+      Boolean(otpRecord.email && isDummyIdentifier('email', String(otpRecord.email)));
+
+    if (!isDummyOtpTarget && otpRecord.otp !== otp)
       throw new ApiError(defaultStatus.OK, 'Invalid OTP', undefined, true, '', OtpResponseCodes.INVALID_OTP);
 
     await Otp.deleteOne({ _id: otpRecord._id });

@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
 import {
   passwordHashingMiddleware,
   comparePasswordMethod,
@@ -9,38 +9,7 @@ import {
 } from '@/shared/utils/common/model.utils.js';
 import { sanitizeUser } from '@/shared/utils/common/auth.utils.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
-import { IUserModel } from './user.interfaces.js';
-
-export interface IUser extends Document {
-  fullName: string;
-  firstName?: string;
-  lastName?: string;
-  birthdate?: string;
-  email: string;
-  phone?: string;
-  phoneNumber?: string;
-  dialCode?: number;
-  isNewUser?: boolean;
-  userType?: string;
-  passwordHash: string;
-  password?: string;
-  name?: string;
-  roleId: Types.ObjectId;
-  status: 'active' | 'inactive' | 'locked';
-  isEmailVerified: boolean;
-  lastLoginAt?: Date;
-  failedLoginAttempts: number;
-  mustChangePassword: boolean;
-  twoFactorEnabled: boolean;
-  refreshTokenVersion: number;
-  createdAt: Date;
-  updatedAt: Date;
-  isPasswordMatch(candidatePassword: string): Promise<boolean>;
-  incrementFailedAttempts(maxAttempts?: number): Promise<boolean>;
-  resetFailedAttempts(): Promise<void>;
-  generateOTP(channel: 'email' | 'sms', purpose: string, OtpModel: any): Promise<string>;
-  verifyOTP(channel: 'email' | 'sms', purpose: string, code: string, OtpModel: any): Promise<boolean>;
-}
+import { IUser, IUserModel } from './user.interfaces.js';
 
 const userSchema = new Schema<IUser>(
   {
@@ -72,6 +41,7 @@ const userSchema = new Schema<IUser>(
     mustChangePassword: { type: Boolean, default: false },
     twoFactorEnabled: { type: Boolean, default: false },
     refreshTokenVersion: { type: Number, default: 0 },
+    profileImage: { type: String },
   },
   {
     timestamps: true,
@@ -112,7 +82,18 @@ userSchema.methods.verifyOTP = verifyOTP;
 
 // Statics
 userSchema.statics.isEmailTaken = async function (email: string, excludeUserId?: Types.ObjectId) {
-  const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
+  const user = await this.findOne({
+    $or: [{ email }, { user_email: email }],
+    _id: { $ne: excludeUserId },
+  });
+  return !!user;
+};
+
+userSchema.statics.isMobileNumberTaken = async function (mobileNumber: string, excludeUserId?: Types.ObjectId) {
+  const user = await this.findOne({
+    $or: [{ phoneNumber: mobileNumber }, { phone: mobileNumber }],
+    _id: { $ne: excludeUserId },
+  });
   return !!user;
 };
 

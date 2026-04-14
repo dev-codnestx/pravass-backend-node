@@ -93,6 +93,7 @@ const PERMISSION_CATALOG_MODULES = [
   { key: 'testimonials', label: 'Testimonials' },
   { key: 'reports', label: 'Reports & Analytics' },
   { key: 'banners', label: 'Banner Management' },
+  { key: 'website-users', label: 'Website Users' },
   { key: 'settings', label: 'Settings' },
   { key: 'user-management', label: 'User Management' },
 ] as const;
@@ -117,6 +118,7 @@ const PERMISSION_CATALOG_MODULE_ACTIONS: Record<string, string[]> = {
   testimonials: ['create', 'read', 'update', 'delete'],
   reports: ['create', 'read', 'update', 'delete'],
   banners: ['create', 'read', 'update', 'delete'],
+  'website-users': ['read', 'update', 'resendMail'],
   settings: ['create', 'read', 'update', 'delete'],
   'user-management': ['create', 'read', 'update', 'delete'],
 };

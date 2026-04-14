@@ -138,8 +138,12 @@ export const normalizePhone = (phone: number | string): string => String(phone).
 
 export const normalizeEmail = (email: string): string => email.toLowerCase();
 
-export const saveOtp = async (data: { phone?: number; dialCode?: number; email?: string }, otp: number, orderId: string) => {
-  await Otp.deleteMany({ $or: [{ phone: data.phone }, { email: data.email }] });
+export const saveOtp = async (
+  data: { phone?: number; phoneNumber?: number; dialCode?: number; email?: string },
+  otp: number,
+  orderId: string,
+) => {
+  await Otp.deleteMany({ $or: [{ phone: data.phone }, { phoneNumber: data.phoneNumber }, { email: data.email }] });
   await Otp.create({ ...data, otp, orderId });
 };
 

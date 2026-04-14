@@ -8,6 +8,11 @@ const otpSchema = new Schema<IOtpDoc>({
     required: false,
     trim: true,
   },
+  phoneNumber: {
+    type: Number,
+    required: false,
+    trim: true,
+  },
   dialCode: {
     type: Number,
     required: false,

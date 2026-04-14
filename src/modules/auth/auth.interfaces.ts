@@ -1,4 +1,4 @@
-import { IUser } from '../user/user.model.js';
+import { IUser } from '../user/user.interfaces.js';
 import { IRole } from '../roles/role.model.js';
 import { PermissionKey } from '../permissions/permission.constants.js';
 

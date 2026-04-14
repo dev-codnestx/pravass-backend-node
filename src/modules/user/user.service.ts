@@ -1,7 +1,9 @@
+import crypto from 'crypto';
 import httpStatus from 'http-status';
 import mongoose from 'mongoose';
 
 import User from '@/modules/user/user.model.js';
+import { sendUserCredentialsEmail } from '@/shared/email/email.service.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 import responseCodes from '@/shared/utils/responseCode/responseCode.js';
@@ -15,6 +17,16 @@ const ROLE_POPULATE = {
 
 const populateRole = <T extends { populate: (path: unknown, select?: unknown) => T }>(query: T) =>
   query.populate(ROLE_POPULATE);
+
+const normalizeEmail = (email?: string): string =>
+  String(email ?? '')
+    .trim()
+    .toLowerCase();
+
+const normalizeMobileNumber = (mobileNumber?: string | number): string =>
+  String(mobileNumber ?? '')
+    .replace(/\D+/g, '')
+    .trim();
 
 /**
  * Get user by id
@@ -43,7 +55,22 @@ const normalizeUserPayload = (payload: NewCreatedUser | NewRegisteredUser | Upda
     delete normalizedPayload.phone;
   }
 
-  if ('avatarUrl' in payload) normalizedPayload.avatarUrl = payload.avatarUrl;
+  if ('phoneNumber' in payload && payload.phoneNumber)
+    normalizedPayload.phoneNumber = normalizeMobileNumber(payload.phoneNumber);
+
+  if ('dialCode' in payload && payload.dialCode !== undefined && payload.dialCode !== null)
+    normalizedPayload.dialCode = Number(payload.dialCode);
+
+  if ('user_email' in payload && payload.user_email) normalizedPayload.email = normalizeEmail(payload.user_email);
+
+  if ('first_name' in payload && payload.first_name) normalizedPayload.firstName = String(payload.first_name).trim();
+
+  if ('last_name' in payload && payload.last_name) normalizedPayload.lastName = String(payload.last_name).trim();
+
+  if ('platform_source' in payload && payload.platform_source)
+    normalizedPayload.userType = String(payload.platform_source).trim().toLowerCase();
+
+  if ('profileImage' in payload) normalizedPayload.profileImage = payload.profileImage;
 
   if ('roleId' in payload && payload.roleId) normalizedPayload.roleId = payload.roleId;
 
@@ -63,7 +90,12 @@ const normalizeUserPayload = (payload: NewCreatedUser | NewRegisteredUser | Upda
  * @returns {Promise<IUserDoc>}
  */
 export const createUser = async (userBody: NewCreatedUser): Promise<IUserDoc> => {
-  if (await User.isEmailTaken(userBody.email))
+  const normalizedPayload = normalizeUserPayload(userBody);
+  const plainPassword = typeof userBody.password === 'string' ? userBody.password : '';
+  const email = typeof normalizedPayload.email === 'string' ? normalizedPayload.email : '';
+  const mobileNumber = typeof normalizedPayload.phoneNumber === 'string' ? normalizedPayload.phoneNumber : '';
+
+  if (email && (await User.isEmailTaken(email)))
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'Email already taken',
@@ -73,7 +105,35 @@ export const createUser = async (userBody: NewCreatedUser): Promise<IUserDoc> =>
       responseCodes.UserResponseCodes.EMAIL_ALREADY_IN_USE,
     );
 
-  const created = await User.create(normalizeUserPayload(userBody));
+  if (mobileNumber && (await User.isMobileNumberTaken(mobileNumber)))
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Phone already taken',
+      undefined,
+      true,
+      '',
+      responseCodes.UserResponseCodes.INVALID_INPUT,
+    );
+
+  const created = await User.create(normalizedPayload);
+  try {
+    if (email && plainPassword)
+      await sendUserCredentialsEmail(
+        email,
+        String(created.fullName || created.firstName || 'User').trim() || 'User',
+        plainPassword,
+      );
+  } catch {
+    await User.deleteOne({ _id: created._id });
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'User created but failed to send credentials email',
+      undefined,
+      true,
+      '',
+      responseCodes.UserResponseCodes.ERROR,
+    );
+  }
   const populated = await getUserById(created._id);
   return populated ?? created;
 };
@@ -84,7 +144,11 @@ export const createUser = async (userBody: NewCreatedUser): Promise<IUserDoc> =>
  * @returns {Promise<IUserDoc>}
  */
 export const registerUser = async (userBody: NewRegisteredUser): Promise<IUserDoc> => {
-  if (await User.isEmailTaken(userBody.email))
+  const normalizedPayload = normalizeUserPayload(userBody);
+  const email = typeof normalizedPayload.email === 'string' ? normalizedPayload.email : '';
+  const mobileNumber = typeof normalizedPayload.phoneNumber === 'string' ? normalizedPayload.phoneNumber : '';
+
+  if (email && (await User.isEmailTaken(email)))
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'Email already taken',
@@ -94,7 +158,17 @@ export const registerUser = async (userBody: NewRegisteredUser): Promise<IUserDo
       responseCodes.UserResponseCodes.EMAIL_ALREADY_IN_USE,
     );
 
-  const created = await User.create(normalizeUserPayload(userBody));
+  if (mobileNumber && (await User.isMobileNumberTaken(mobileNumber)))
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Phone already taken',
+      undefined,
+      true,
+      '',
+      responseCodes.UserResponseCodes.INVALID_INPUT,
+    );
+
+  const created = await User.create(normalizedPayload);
   const populated = await getUserById(created._id);
   return populated ?? created;
 };
@@ -117,7 +191,11 @@ export const queryUsers = (filter: Record<string, any>, options: PaginateOptions
  * @returns {Promise<IUserDoc | null>}
  */
 export const getUserByEmail = async (email: string): Promise<IUserDoc | null> =>
-  populateRole(User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash'));
+  populateRole(
+    User.findOne({
+      $or: [{ email: email.toLowerCase().trim() }, { ['user_email']: email.toLowerCase().trim() }],
+    }).select('+passwordHash'),
+  );
 
 /**
  * Update user by id
@@ -140,7 +218,11 @@ export const updateUserById = async (
       responseCodes.UserResponseCodes.NOT_FOUND,
     );
 
-  if (updateBody.email && (await User.isEmailTaken(updateBody.email, userId)))
+  const normalizedPayload = normalizeUserPayload(updateBody);
+  const email = typeof normalizedPayload.email === 'string' ? normalizedPayload.email : '';
+  const mobileNumber = typeof normalizedPayload.phoneNumber === 'string' ? normalizedPayload.phoneNumber : '';
+
+  if (email && (await User.isEmailTaken(email, userId)))
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'Email already taken',
@@ -150,7 +232,17 @@ export const updateUserById = async (
       responseCodes.UserResponseCodes.EMAIL_ALREADY_IN_USE,
     );
 
-  Object.assign(user, normalizeUserPayload(updateBody));
+  if (mobileNumber && (await User.isMobileNumberTaken(mobileNumber, userId)))
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Phone already taken',
+      undefined,
+      true,
+      '',
+      responseCodes.UserResponseCodes.INVALID_INPUT,
+    );
+
+  Object.assign(user, normalizedPayload);
   await user.save();
   const populated = await getUserById(user._id);
   return populated ?? user;
@@ -175,4 +267,64 @@ export const deleteUserById = async (userId: mongoose.Types.ObjectId): Promise<I
 
   await user.deleteOne();
   return user;
+};
+
+export const resendUserCredentialsById = async (userId: mongoose.Types.ObjectId): Promise<IUserDoc> => {
+  const user = await User.findById(userId).select('+passwordHash');
+  if (!user)
+    throw new ApiError(
+      httpStatus.NOT_FOUND,
+      'User not found',
+      undefined,
+      true,
+      '',
+      responseCodes.UserResponseCodes.NOT_FOUND,
+    );
+
+  if (!user.email)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'User email is required',
+      undefined,
+      true,
+      '',
+      responseCodes.UserResponseCodes.INVALID_INPUT,
+    );
+
+  const previousPasswordHash = user.passwordHash;
+  const previousMustChangePassword = user.mustChangePassword;
+  const temporaryPassword = crypto.randomBytes(8).toString('hex');
+
+  user.passwordHash = temporaryPassword;
+  user.mustChangePassword = true;
+  await user.save();
+
+  try {
+    await sendUserCredentialsEmail(
+      user.email,
+      String(user.fullName || user.firstName || 'User').trim() || 'User',
+      temporaryPassword,
+    );
+  } catch {
+    await User.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          passwordHash: previousPasswordHash,
+          mustChangePassword: previousMustChangePassword,
+        },
+      },
+    );
+    throw new ApiError(
+      httpStatus.INTERNAL_SERVER_ERROR,
+      'Failed to resend credentials email',
+      undefined,
+      true,
+      '',
+      responseCodes.UserResponseCodes.ERROR,
+    );
+  }
+
+  const populated = await getUserById(user._id);
+  return populated ?? user;
 };

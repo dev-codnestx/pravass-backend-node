@@ -22,7 +22,7 @@ const authCookieOptions = {
 const getRefreshTokenFromRequest = (req: Request): string | undefined =>
   (req.body?.refreshToken as string | undefined) || req.cookies?.refreshToken;
 
-const getClientTypeFromRequest = (req: Request): string => {
+const getPlatformSourceFromRequest = (req: Request): string => {
   const clientType = req.get('x-client-type');
   return (clientType ? clientType.trim().toLowerCase() : 'website') || 'website';
 };
@@ -112,7 +112,10 @@ export const getMe = catchAsync(async (req: Request, res: Response) => {
 });
 
 export const generateOtp = catchAsync(async (req: Request, res: Response) => {
-  const otpSession = await authService.generateUserOtp(req.body);
+  const otpSession = await authService.generateUserOtp({
+    phoneNumber: req.body.phoneNumber,
+    dialCode: req.body.dialCode,
+  });
   res.success(otpSession, responseCodes.AuthResponseCodes.SUCCESS, 'Otp sent successfully');
 });
 
@@ -123,21 +126,29 @@ export const resendOtp = catchAsync(async (req: Request, res: Response) => {
 
 export const verifyOtp = catchAsync(async (req: Request, res: Response) => {
   const result = await authService.verifyPhoneOtp({
-    ...req.body,
-    userType: getClientTypeFromRequest(req),
+    phoneNumber: req.body.phoneNumber,
+    otp: req.body.otp,
   });
-  const tokens = await tokenService.generateAuthTokens(result.userDoc);
-  if (tokens) setAuthCookies(res, tokens);
+
+  if (result.isNewUser) {
+    res.success(
+      {
+        isNewUser: true,
+        message: result.message || 'Please complete registration.',
+      },
+      responseCodes.AuthResponseCodes.SUCCESS,
+      'Otp verified successfully',
+    );
+    return;
+  }
+
+  if (result.tokens) setAuthCookies(res, result.tokens);
 
   res.success(
     {
-      user: {
-        ...result.user,
-        verificationToken: result.verificationToken,
-      },
-      tokens,
-      isNewUser: result.isNewUser,
-      verificationToken: result.verificationToken,
+      user: result.user,
+      tokens: result.tokens,
+      isNewUser: false,
     },
     responseCodes.AuthResponseCodes.SUCCESS,
     'Otp verified successfully',
@@ -146,8 +157,13 @@ export const verifyOtp = catchAsync(async (req: Request, res: Response) => {
 
 export const createAccount = catchAsync(async (req: Request, res: Response) => {
   const payload = await authService.createOtpUserAccount({
-    ...req.body,
-    userType: getClientTypeFromRequest(req),
+    phoneNumber: req.body.phoneNumber,
+    dialCode: req.body.dialCode,
+    email: req.body.email,
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    birthdate: req.body.birthdate,
+    userType: getPlatformSourceFromRequest(req),
   });
   setAuthCookies(res, payload.tokens);
   res.success(payload, responseCodes.AuthResponseCodes.SUCCESS, 'Account created successfully');

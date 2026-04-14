@@ -8,11 +8,12 @@ const statusSchema = Joi.string().valid('active', 'inactive', 'locked', 'Active'
 const createUserBody = {
   email: Joi.string().required().email(),
   password: Joi.string().required().custom(password),
-  name: Joi.string().required(),
-  phone: Joi.string().required(),
+  fullName: Joi.string().required(),
+  phoneNumber: Joi.number().required(),
+  dialCode: Joi.number().integer().default(91),
   roleId: Joi.string().required().custom(objectId),
   status: statusSchema.required(),
-  avatarUrl: Joi.string().allow(''),
+  profileImage: Joi.string().allow(''),
 };
 
 export const createUser = {
@@ -51,16 +52,23 @@ export const updateUser = {
       email: Joi.string().email(),
       password: Joi.string().custom(password),
       name: Joi.string(),
-      phone: Joi.string(),
+      phoneNumber: Joi.string(),
+      dialCode: Joi.number().integer(),
       roleId: Joi.string().custom(objectId),
       status: statusSchema,
-      avatarUrl: Joi.string().allow(''),
+      profileImage: Joi.string().allow(''),
     },
     { minFields: 1 },
   ),
 };
 
 export const deleteUser = {
+  params: generateJoiValidation({
+    userId: Joi.string().custom(objectId),
+  }),
+};
+
+export const resendCredentials = {
   params: generateJoiValidation({
     userId: Joi.string().custom(objectId),
   }),
