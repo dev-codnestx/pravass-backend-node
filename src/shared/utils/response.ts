@@ -35,5 +35,9 @@ export const responseMiddleware = (_req: Request, res: Response, next: NextFunct
     return sendSuccessResponse(this, data, code, message);
   };
 
+  res.error = function error(message: string, statusCode: number = 400, errorMsg?: string, code?: number): Response {
+    return sendErrorResponse(this, statusCode, message, errorMsg, code);
+  };
+
   next();
 };

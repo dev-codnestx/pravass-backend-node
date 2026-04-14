@@ -14,3 +14,7 @@ coverage
 
 # build folder
 dist
+
+# Uploaded files (keep .gitkeep)
+uploads/*
+!uploads/.gitkeep
