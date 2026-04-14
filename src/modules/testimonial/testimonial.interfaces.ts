@@ -1,5 +1,5 @@
 import { Document, Model } from 'mongoose';
-import { IQueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
+import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
 export interface ITestimonial {
   customerName: string;
@@ -20,5 +20,5 @@ export interface ITestimonialDoc extends ITestimonial, Document {
 }
 
 export interface ITestimonialModel extends Model<ITestimonialDoc> {
-  paginate(filter: Record<string, any>, options: Record<string, any>): Promise<IQueryResult<ITestimonialDoc>>;
+  paginate(filter: Record<string, any>, options: Record<string, any>): Promise<QueryResult<ITestimonialDoc>>;
 }

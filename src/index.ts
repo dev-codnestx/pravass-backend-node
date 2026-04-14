@@ -8,12 +8,16 @@ import connectToDatabase from '@/shared/config/dbConfig.js';
 
 let server: Server;
 
-connectToDatabase().then(() => {
-  console.info('Connected to MongoDB');
-  server = app.listen(config.port, () => {
-    console.info(`Listening to port ${config.port}`);
+connectToDatabase()
+  .then(() => {
+    console.info('Connected to MongoDB');
+    server = app.listen(config.port, () => {
+      console.info(`Listening to port ${config.port}`);
+    });
+  })
+  .catch((err) => {
+    console.error('Database connection failed:', err);
   });
-});
 
 const exitHandler = () => {
   if (server)
