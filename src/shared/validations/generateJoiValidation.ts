@@ -17,6 +17,14 @@ type MongooseSchemaLike = {
   };
 };
 
+type JoiSchemaLike = Record<string, AnySchema>;
+
+type GenerateJoiValidationOptions = {
+  isUpdate?: boolean;
+  allowUnknown?: boolean;
+  minFields?: number;
+};
+
 const mongooseToJoiTypeMap: Record<string, AnySchema> = {
   String: Joi.string(),
   Number: Joi.number(),
@@ -26,35 +34,66 @@ const mongooseToJoiTypeMap: Record<string, AnySchema> = {
   Array: Joi.array().items(Joi.string()), // default to string if unknown
 };
 
-/**
- * Generate Joi validation schema from Mongoose schema
- * @param mongooseSchema - The Mongoose schema object
- * @param isUpdate - Whether this is for an update operation
- * @returns Joi.ObjectSchema
- */
-export const generateJoiValidation = (mongooseSchema: MongooseSchemaLike, isUpdate = false): Joi.ObjectSchema => {
+const isMongooseSchemaLike = (schema: JoiSchemaLike | MongooseSchemaLike): schema is MongooseSchemaLike =>
+  'paths' in schema && typeof schema.paths === 'object' && schema.paths !== null;
+
+const resolveOptions = (
+  optionsOrIsUpdate?: GenerateJoiValidationOptions | boolean,
+): Required<GenerateJoiValidationOptions> => {
+  if (typeof optionsOrIsUpdate === 'boolean')
+    return {
+      isUpdate: optionsOrIsUpdate,
+      allowUnknown: false,
+      minFields: 0,
+    };
+
+  return {
+    isUpdate: optionsOrIsUpdate?.isUpdate ?? false,
+    allowUnknown: optionsOrIsUpdate?.allowUnknown ?? false,
+    minFields: optionsOrIsUpdate?.minFields ?? 0,
+  };
+};
+
+const buildJoiSchemaFromMongoosePaths = (
+  mongooseSchema: MongooseSchemaLike,
+  isUpdate: boolean,
+): Record<string, AnySchema> => {
   const joiSchema: Record<string, AnySchema> = {};
 
   Object.entries(mongooseSchema.paths).forEach(([key, path]) => {
+    if (key === '__v') return;
+
     let joiType = mongooseToJoiTypeMap[path.instance] || Joi.any();
 
     const isRequired = typeof path.isRequired === 'function' ? path.isRequired() : path.isRequired;
 
-    joiType = isUpdate ? joiType.optional() : isRequired ? joiType.required() : joiType.optional();
+    if (path.options?.ref) joiType = Joi.string().custom(objectId);
 
-    if (path.options?.ref) joiType = joiType.custom(objectId).optional(); // Assume optional in update
-
-    if (path.instance === 'Array' && path.options?.ref)
-      joiType = Joi.array().items(Joi.string().custom(objectId)).optional();
+    if (path.instance === 'Array' && path.options?.ref) joiType = Joi.array().items(Joi.string().custom(objectId));
 
     if (path.enumValues?.length) joiType = joiType.valid(...(path.enumValues as string[]));
+
+    joiType = isUpdate ? joiType.optional() : isRequired ? joiType.required() : joiType.optional();
 
     joiSchema[key] = joiType;
   });
 
-  // Add custom optional fields (if needed globally)
-  joiSchema.longitude = Joi.number().optional();
-  joiSchema.latitude = Joi.number().optional();
+  return joiSchema;
+};
 
-  return Joi.object(joiSchema);
+export const generateJoiValidation = (
+  schema: JoiSchemaLike | MongooseSchemaLike,
+  optionsOrIsUpdate?: GenerateJoiValidationOptions | boolean,
+): Joi.ObjectSchema => {
+  const { isUpdate, allowUnknown, minFields } = resolveOptions(optionsOrIsUpdate);
+
+  const joiSchema = isMongooseSchemaLike(schema) ? buildJoiSchemaFromMongoosePaths(schema, isUpdate) : schema;
+
+  let objectSchema = Joi.object().keys(joiSchema);
+
+  if (minFields > 0) objectSchema = objectSchema.min(minFields);
+
+  if (allowUnknown) objectSchema = objectSchema.unknown(true);
+
+  return objectSchema;
 };

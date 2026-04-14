@@ -1,37 +1,45 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model } from 'mongoose';
+import { IOtpDoc } from '@/modules/otp/otp.interface.js';
+import { toJSON } from '@/shared/utils/plugins/index.js';
 
-export interface IOtp extends Document {
-  subjectType: 'user' | 'customer';
-  subjectId: Types.ObjectId;
-  channel: 'email' | 'sms';
-  purpose: 'login' | 'forgot_password' | 'verify_email' | 'verify_phone';
-  codeHash: string;
-  expiresAt: Date;
-  consumedAt?: Date;
-  attempts: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const otpSchema = new Schema<IOtp>(
-  {
-    subjectType: { type: String, enum: ['user', 'customer'], required: true, index: true },
-    subjectId: { type: Schema.Types.ObjectId, required: true, index: true },
-    channel: { type: String, enum: ['email', 'sms'], required: true },
-    purpose: {
-      type: String,
-      enum: ['login', 'forgot_password', 'verify_email', 'verify_phone'],
-      required: true,
-      index: true,
-    },
-    codeHash: { type: String, required: true },
-    expiresAt: { type: Date, required: true, index: true },
-    consumedAt: Date,
-    attempts: { type: Number, default: 0 },
+const otpSchema = new Schema<IOtpDoc>({
+  phone: {
+    type: Number,
+    required: false,
+    trim: true,
   },
-  { timestamps: true },
-);
+  dialCode: {
+    type: Number,
+    required: false,
+    trim: true,
+    default: 91, // Default to India
+  },
+  email: {
+    type: String,
+    required: false,
+    trim: true,
+    lowercase: true,
+  },
+  orderId: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  otp: {
+    type: Number,
+    required: true,
+  },
+  isVerified: {
+    type: Boolean,
+    default: false,
+  },
+  createdAt: {
+    type: Date,
+    default: Date.now,
+  },
+});
 
-otpSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+// add plugin that converts mongoose to json
+otpSchema.plugin(toJSON);
 
-export const OtpModel = model<IOtp>('Otp', otpSchema);
+export const Otp = model<IOtpDoc>('Otp', otpSchema);

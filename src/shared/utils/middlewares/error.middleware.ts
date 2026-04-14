@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import mongoose from 'mongoose';
 
 import config from '@/shared/config/config.js';
+import logger from '@/shared/config/logger.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { sendErrorResponse } from '@/shared/utils/response.js';
 import { defaultStatus, status } from '@/shared/utils/responseCode/httpStatusAlias.js';
@@ -27,7 +28,7 @@ export const errorHandler = (err: ApiError, _req: Request, res: Response, _next:
     message = status[defaultStatus.INTERNAL_SERVER_ERROR] || 'Internal Server Error';
   }
 
-  if (config.env === 'development') console.warn(err);
+  if (config.env === 'development') logger.error(err);
 
   sendErrorResponse(res, statusCode, message, config.env === 'development' ? err.stack : undefined, err.errorCode);
 };

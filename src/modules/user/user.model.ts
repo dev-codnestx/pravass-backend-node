@@ -13,8 +13,15 @@ import { IUserModel } from './user.interfaces.js';
 
 export interface IUser extends Document {
   fullName: string;
+  firstName?: string;
+  lastName?: string;
+  birthdate?: string;
   email: string;
   phone?: string;
+  phoneNumber?: string;
+  dialCode?: number;
+  isNewUser?: boolean;
+  userType?: string;
   passwordHash: string;
   password?: string;
   name?: string;
@@ -37,18 +44,22 @@ export interface IUser extends Document {
 
 const userSchema = new Schema<IUser>(
   {
-    fullName: { type: String, required: true, trim: true },
+    fullName: { type: String, trim: true },
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
+    birthdate: { type: String, trim: true },
     email: {
       type: String,
-      required: true,
-      unique: true, // Automatically creates index
       lowercase: true,
       trim: true,
       set: (val: string) => val.toLowerCase().trim(),
     },
-    phone: { type: String, trim: true },
-    passwordHash: { type: String, required: true, select: false },
-    roleId: { type: Schema.Types.ObjectId, ref: 'Role', required: true, index: true },
+    phoneNumber: { type: String, trim: true },
+    dialCode: { type: Number, default: 91 },
+    isNewUser: { type: Boolean, default: false },
+    userType: { type: String, trim: true },
+    passwordHash: { type: String, select: false },
+    roleId: { type: Schema.Types.ObjectId, ref: 'Role', index: true },
     status: {
       type: String,
       enum: ['active', 'inactive', 'locked'],
@@ -68,8 +79,18 @@ const userSchema = new Schema<IUser>(
   },
 );
 
+userSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      email: { $type: 'string', $ne: '' },
+    },
+  },
+);
+
 userSchema.plugin(toJSON);
-userSchema.plugin(paginate);
+userSchema.plugin(paginate as any);
 
 // Virtuals
 userSchema
