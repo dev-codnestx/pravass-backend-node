@@ -2,49 +2,52 @@ import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 
 import catchAsync from '@/shared/utils/catchAsync.js';
-import ApiError from '@/shared/utils/errors/ApiError.js';
 import pick from '@/shared/utils/pick.js';
-import { PaginateOptions } from '@/shared/utils/plugins/paginate/paginate.js';
-import responseCodes from '@/shared/utils/responseCode/responseCode.js';
+import responseCode from '@/shared/utils/responseCode/responseCode.js';
 
-import { applicationService } from './index.js';
+import { applicationService } from './application.service.js';
 
-export const getApplications = catchAsync(async (req: Request, res: Response) => {
-  const filter = applicationService.buildApplicationFilter(req.query);
-  const options: PaginateOptions = pick(req.query, ['sortBy', 'limit', 'page', 'projectBy']);
-  const result = await applicationService.queryApplications(filter, options);
-  res.success(result, responseCodes.ApplicationResponseCodes.SUCCESS, 'Applications fetched successfully');
-});
-
-export const getApplication = catchAsync(async (req: Request, res: Response) => {
-  if (typeof req.params['applicationId'] === 'string') {
-    const application = await applicationService.getApplicationById(req.params['applicationId']);
-    if (!application) throw new ApiError(httpStatus.NOT_FOUND, 'Application not found');
-
-    res.success({ application }, responseCodes.ApplicationResponseCodes.SUCCESS, 'Application fetched successfully');
-  }
-});
-
-export const updateApplicationStatus = catchAsync(async (req: Request, res: Response) => {
-  if (typeof req.params['applicationId'] === 'string') {
-    const application = await applicationService.updateApplicationStatus(req.params['applicationId'], req.body);
-    res.success({ application }, responseCodes.ApplicationResponseCodes.SUCCESS, 'Application status updated successfully');
-  }
-});
-
-export const deleteApplication = catchAsync(async (req: Request, res: Response) => {
-  if (typeof req.params['applicationId'] === 'string') {
-    await applicationService.deleteApplicationById(req.params['applicationId']);
-    res.success(null, responseCodes.ApplicationResponseCodes.SUCCESS, 'Application deleted successfully');
-  }
-});
-
-/**
- * Public: submit a new application from the website (no auth required)
- */
-export const submitApplication = catchAsync(async (req: Request, res: Response) => {
+const createApplication = catchAsync(async (req: Request, res: Response) => {
   const application = await applicationService.createApplication(req.body);
-  res
+  return res
     .status(httpStatus.CREATED)
-    .success({ application }, responseCodes.ApplicationResponseCodes.SUCCESS, 'Application submitted successfully');
+    .success(application, responseCode.ApplicationResponseCodes?.SUCCESS || 200, 'Application submitted successfully');
 });
+
+const getApplications = catchAsync(async (req: Request, res: Response) => {
+  const filter = pick(req.query, ['name', 'email', 'appliedJob', 'status']);
+  const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate', 'fields', 'includeTimeStamps']);
+
+  if (req.query.search)
+    filter.$or = [
+      { name: { $regex: req.query.search, $options: 'i' } },
+      { email: { $regex: req.query.search, $options: 'i' } },
+    ];
+
+  const result = await applicationService.queryApplications(filter, options);
+  return res.success(result, responseCode.ApplicationResponseCodes?.SUCCESS || 200, 'Applications fetched successfully');
+});
+
+const getApplication = catchAsync(async (req: Request, res: Response) => {
+  const application = await applicationService.getApplicationById(req.params.applicationId);
+  if (!application) return res.status(httpStatus.NOT_FOUND).error('Application not found');
+  return res.success(application, responseCode.ApplicationResponseCodes?.SUCCESS || 200, 'Application fetched successfully');
+});
+
+const updateApplication = catchAsync(async (req: Request, res: Response) => {
+  const application = await applicationService.updateApplicationById(req.params.applicationId, req.body);
+  return res.success(application, responseCode.ApplicationResponseCodes?.SUCCESS || 200, 'Application updated successfully');
+});
+
+const deleteApplication = catchAsync(async (req: Request, res: Response) => {
+  await applicationService.deleteApplicationById(req.params.applicationId);
+  return res.success(null, responseCode.ApplicationResponseCodes?.SUCCESS || 200, 'Application deleted successfully');
+});
+
+export const applicationController = {
+  createApplication,
+  getApplications,
+  getApplication,
+  updateApplication,
+  deleteApplication,
+};

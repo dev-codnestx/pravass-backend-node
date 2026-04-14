@@ -1,9 +1,8 @@
 import Joi from 'joi';
 
 import { jobDepartments, jobStatuses } from '@/shared/constants/enum.constant.js';
-import { objectId } from '@/shared/validations/custom.validation.js';
 
-export const createJob = {
+const createJob = {
   body: Joi.object().keys({
     title: Joi.string().required().trim().min(3).max(200),
     department: Joi.string()
@@ -18,31 +17,27 @@ export const createJob = {
   }),
 };
 
-export const getJobs = {
+const getJobs = {
   query: Joi.object().keys({
-    search: Joi.string().allow('').optional(),
-    department: Joi.string()
-      .valid(...jobDepartments)
-      .optional(),
-    status: Joi.string()
-      .valid(...jobStatuses)
-      .optional(),
-    sortBy: Joi.string().optional(),
-    projectBy: Joi.string().optional(),
-    limit: Joi.number().integer().optional(),
-    page: Joi.number().integer().optional(),
+    title: Joi.string(),
+    department: Joi.string(),
+    status: Joi.string(),
+    sortBy: Joi.string(),
+    limit: Joi.number().integer(),
+    page: Joi.number().integer(),
+    search: Joi.string(),
   }),
 };
 
-export const getJob = {
+const getJob = {
   params: Joi.object().keys({
-    jobId: Joi.string().custom(objectId),
+    jobId: Joi.string().required(),
   }),
 };
 
-export const updateJob = {
+const updateJob = {
   params: Joi.object().keys({
-    jobId: Joi.required().custom(objectId),
+    jobId: Joi.string().required(),
   }),
   body: Joi.object()
     .keys({
@@ -60,14 +55,23 @@ export const updateJob = {
     .min(1),
 };
 
-export const deleteJob = {
+const deleteJob = {
   params: Joi.object().keys({
-    jobId: Joi.string().custom(objectId),
+    jobId: Joi.string().required(),
   }),
 };
 
-export const toggleStatus = {
+const toggleStatus = {
   params: Joi.object().keys({
-    jobId: Joi.string().custom(objectId),
+    jobId: Joi.string().required(),
   }),
+};
+
+export const jobValidation = {
+  createJob,
+  getJobs,
+  getJob,
+  updateJob,
+  deleteJob,
+  toggleStatus,
 };

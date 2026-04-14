@@ -1,20 +1,19 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import httpStatus from 'http-status';
 
-import Job from '@/modules/careers/job.model.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
-import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
+import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 import responseCodes from '@/shared/utils/responseCode/responseCode.js';
 
-import { CreateJobBody, IJobDoc, UpdateJobBody } from './job.interfaces.js';
+import { IJob, IJobDoc } from './job.interfaces.js';
+import JobModel from './job.model.js';
 
 /**
  * Create a job
- * @param {CreateJobBody} jobBody
+ * @param {IJob} jobBody
  * @returns {Promise<IJobDoc>}
  */
-export const createJob = async (jobBody: CreateJobBody): Promise<IJobDoc> => {
-  if (await Job.isTitleTaken(jobBody.title))
+const createJob = async (jobBody: IJob): Promise<IJobDoc> => {
+  if (await JobModel.isTitleTaken(jobBody.title))
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'A job with this title already exists',
@@ -24,37 +23,36 @@ export const createJob = async (jobBody: CreateJobBody): Promise<IJobDoc> => {
       responseCodes.JobResponseCodes.TITLE_ALREADY_EXISTS,
     );
 
-  return Job.create(jobBody);
+  return JobModel.create(jobBody);
 };
 
 /**
- * Query for jobs with pagination, search, and filters
+ * Query for jobs
  * @param {Object} filter - Mongo filter
  * @param {Object} options - Query options
  * @returns {Promise<QueryResult>}
  */
-export const queryJobs = (filter: Record<string, any>, options: PaginateOptions): Promise<QueryResult> =>
-  Promise.resolve(Job.paginate(filter, options as any));
+const queryJobs = async (filter: Record<string, unknown>, options: Record<string, unknown>): Promise<QueryResult> =>
+  JobModel.paginate({ ...filter, isDeleted: false } as Record<string, unknown>, options);
 
 /**
  * Get job by id
- * @param {string} jobId
+ * @param {string} id
  * @returns {Promise<IJobDoc | null>}
  */
-export const getJobById = async (jobId: string): Promise<IJobDoc | null> => Job.findById(jobId);
+const getJobById = async (id: string): Promise<IJobDoc | null> => JobModel.findOne({ _id: id, isDeleted: false });
 
 /**
  * Update job by id
  * @param {string} jobId
- * @param {UpdateJobBody} updateBody
+ * @param {Partial<IJob>} updateBody
  * @returns {Promise<IJobDoc | null>}
  */
-export const updateJobById = async (jobId: string, updateBody: UpdateJobBody): Promise<IJobDoc | null> => {
+const updateJobById = async (jobId: string, updateBody: Partial<IJob>): Promise<IJobDoc | null> => {
   const job = await getJobById(jobId);
-  if (!job)
-    throw new ApiError(httpStatus.NOT_FOUND, 'Job not found', undefined, true, '', responseCodes.JobResponseCodes.NOT_FOUND);
+  if (!job) throw new ApiError(httpStatus.NOT_FOUND, 'Job not found');
 
-  if (updateBody.title && updateBody.title !== job.title && (await Job.isTitleTaken(updateBody.title, jobId)))
+  if (updateBody.title && updateBody.title !== job.title && (await JobModel.isTitleTaken(updateBody.title, jobId)))
     throw new ApiError(
       httpStatus.BAD_REQUEST,
       'A job with this title already exists',
@@ -70,54 +68,37 @@ export const updateJobById = async (jobId: string, updateBody: UpdateJobBody): P
 };
 
 /**
- * Delete job by id
+ * Delete job by id (soft delete — matches banner pattern)
  * @param {string} jobId
  * @returns {Promise<IJobDoc | null>}
  */
-export const deleteJobById = async (jobId: string): Promise<IJobDoc | null> => {
+const deleteJobById = async (jobId: string): Promise<IJobDoc | null> => {
   const job = await getJobById(jobId);
-  if (!job)
-    throw new ApiError(httpStatus.NOT_FOUND, 'Job not found', undefined, true, '', responseCodes.JobResponseCodes.NOT_FOUND);
-
-  await job.deleteOne();
+  if (!job) throw new ApiError(httpStatus.NOT_FOUND, 'Job not found');
+  job.isDeleted = true;
+  job.status = 'Closed';
+  await job.save();
   return job;
 };
 
 /**
  * Toggle job status (Active <-> Closed)
  * @param {string} jobId
- * @param {string} updatedBy
  * @returns {Promise<IJobDoc | null>}
  */
-export const toggleJobStatus = async (jobId: string, updatedBy: any): Promise<IJobDoc | null> => {
+const toggleJobStatus = async (jobId: string): Promise<IJobDoc | null> => {
   const job = await getJobById(jobId);
-  if (!job)
-    throw new ApiError(httpStatus.NOT_FOUND, 'Job not found', undefined, true, '', responseCodes.JobResponseCodes.NOT_FOUND);
-
+  if (!job) throw new ApiError(httpStatus.NOT_FOUND, 'Job not found');
   job.status = job.status === 'Active' ? 'Closed' : 'Active';
-  job.updatedBy = updatedBy;
-
   await job.save();
   return job;
 };
 
-/**
- * Build filter from query params for job listing
- * @param {Record<string, any>} query
- * @returns {Record<string, any>}
- */
-export const buildJobFilter = (query: Record<string, any>): Record<string, any> => {
-  const filter: Record<string, any> = {};
-
-  if (query.search)
-    filter.$or = [
-      { title: { $regex: query.search, $options: 'i' } },
-      { department: { $regex: query.search, $options: 'i' } },
-      { location: { $regex: query.search, $options: 'i' } },
-    ];
-
-  if (query.department) filter.department = query.department;
-  if (query.status) filter.status = query.status;
-
-  return filter;
+export const jobService = {
+  createJob,
+  queryJobs,
+  getJobById,
+  updateJobById,
+  deleteJobById,
+  toggleJobStatus,
 };

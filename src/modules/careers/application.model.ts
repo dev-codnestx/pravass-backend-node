@@ -1,25 +1,11 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model } from 'mongoose';
 
 import { applicationStatuses } from '@/shared/constants/enum.constant.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 
-import { IApplicationModel } from './application.interfaces.js';
+import { IApplicationDoc, IApplicationModel } from './application.interfaces.js';
 
-export interface IApplication extends Document {
-  _id: Types.ObjectId;
-  name: string;
-  email: string;
-  phone?: string;
-  experience?: string;
-  appliedJob: Types.ObjectId;
-  coverLetter?: string;
-  resume?: string;
-  status: 'Under Review' | 'Shortlisted' | 'Interview' | 'Rejected';
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const applicationSchema = new Schema<IApplication>(
+const applicationSchema = new Schema<IApplicationDoc, IApplicationModel>(
   {
     name: { type: String, required: true, trim: true },
     email: { type: String, required: true, trim: true, index: true },
@@ -39,6 +25,8 @@ const applicationSchema = new Schema<IApplication>(
       default: 'Under Review',
       index: true,
     },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,
@@ -48,5 +36,5 @@ const applicationSchema = new Schema<IApplication>(
 applicationSchema.plugin(toJSON);
 applicationSchema.plugin(paginate);
 
-export const ApplicationModel = model<IApplication, IApplicationModel>('Application', applicationSchema);
+export const ApplicationModel = model<IApplicationDoc, IApplicationModel>('Application', applicationSchema);
 export default ApplicationModel;

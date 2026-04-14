@@ -1,26 +1,11 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model } from 'mongoose';
 
 import { jobDepartments, jobStatuses } from '@/shared/constants/enum.constant.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 
-import { IJobModel } from './job.interfaces.js';
+import { IJobDoc, IJobModel } from './job.interfaces.js';
 
-export interface IJob extends Document {
-  _id: Types.ObjectId;
-  title: string;
-  department: string;
-  location: string;
-  description?: string;
-  requirements?: string;
-  status: 'Active' | 'Closed';
-  totalApplications: number;
-  createdBy: Types.ObjectId;
-  updatedBy: Types.ObjectId;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-const jobSchema = new Schema<IJob>(
+const jobSchema = new Schema<IJobDoc, IJobModel>(
   {
     title: { type: String, required: true, trim: true, index: true },
     department: {
@@ -38,16 +23,10 @@ const jobSchema = new Schema<IJob>(
       default: 'Active',
       index: true,
     },
+    isDeleted: { type: Boolean, default: false },
     totalApplications: { type: Number, default: 0 },
-    createdBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    updatedBy: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
-    },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: true,
@@ -59,9 +38,9 @@ jobSchema.plugin(paginate);
 
 // Static: check if title is already taken
 jobSchema.statics.isTitleTaken = async function (title: string, excludeJobId?: string) {
-  const job = await this.findOne({ title, _id: { $ne: excludeJobId } });
+  const job = await this.findOne({ title, _id: { $ne: excludeJobId }, isDeleted: false });
   return !!job;
 };
 
-export const JobModel = model<IJob, IJobModel>('Job', jobSchema);
+export const JobModel = model<IJobDoc, IJobModel>('Job', jobSchema);
 export default JobModel;

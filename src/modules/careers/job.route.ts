@@ -1,25 +1,43 @@
-import express, { Router } from 'express';
+import express from 'express';
 
-import authMiddleware from '@/modules/auth/auth.middleware.js';
+import authMiddleware from '../auth/auth.middleware.js';
 import { validateMiddleware } from '@/shared/utils/middlewares/index.js';
+import { setAuditFields } from '@/shared/middleware/setAuditFields.js';
+import { AuditMode } from '@/shared/constants/enum.constant.js';
 
-import { jobController, jobValidation } from './index.js';
+import { jobController } from './job.controller.js';
+import { jobValidation } from './job.validation.js';
 
-const router: Router = express.Router();
+const router = express.Router();
 
 router
   .route('/')
-  .post(authMiddleware('manageJobs'), validateMiddleware(jobValidation.createJob), jobController.createJob)
-  .get(authMiddleware('getJobs'), validateMiddleware(jobValidation.getJobs), jobController.getJobs);
+  .post(
+    authMiddleware(),
+    validateMiddleware(jobValidation.createJob),
+    setAuditFields({ mode: AuditMode.CREATE }),
+    jobController.createJob,
+  )
+  .get(validateMiddleware(jobValidation.getJobs), jobController.getJobs);
 
 router
   .route('/:jobId')
-  .get(authMiddleware('getJobs'), validateMiddleware(jobValidation.getJob), jobController.getJob)
-  .patch(authMiddleware('manageJobs'), validateMiddleware(jobValidation.updateJob), jobController.updateJob)
-  .delete(authMiddleware('manageJobs'), validateMiddleware(jobValidation.deleteJob), jobController.deleteJob);
+  .get(validateMiddleware(jobValidation.getJob), jobController.getJob)
+  .patch(
+    authMiddleware(),
+    validateMiddleware(jobValidation.updateJob),
+    setAuditFields({ mode: AuditMode.UPDATE }),
+    jobController.updateJob,
+  )
+  .delete(authMiddleware(), validateMiddleware(jobValidation.deleteJob), jobController.deleteJob);
 
 router
   .route('/:jobId/toggle-status')
-  .patch(authMiddleware('manageJobs'), validateMiddleware(jobValidation.toggleStatus), jobController.toggleStatus);
+  .patch(
+    authMiddleware(),
+    validateMiddleware(jobValidation.toggleStatus),
+    setAuditFields({ mode: AuditMode.UPDATE }),
+    jobController.toggleStatus,
+  );
 
 export default router;

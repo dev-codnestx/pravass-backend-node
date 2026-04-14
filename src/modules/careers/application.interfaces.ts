@@ -1,11 +1,7 @@
-import { Model, Types } from 'mongoose';
+import { Document, Model, Types } from 'mongoose';
 
 import { applicationStatuses } from '@/shared/constants/enum.constant.js';
-import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
-
-import type { IApplication as IApplicationDoc } from './application.model.js';
-
-export type { IApplicationDoc };
+import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
 export type ApplicationStatus = (typeof applicationStatuses)[number];
 
@@ -18,25 +14,14 @@ export interface IApplication {
   coverLetter?: string;
   resume?: string;
   status: ApplicationStatus;
-  createdAt: Date;
-  updatedAt: Date;
+  createdBy?: Types.ObjectId;
+  updatedBy?: Types.ObjectId;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
+
+export interface IApplicationDoc extends IApplication, Document {}
 
 export interface IApplicationModel extends Model<IApplicationDoc> {
-  paginate(filter: Record<string, unknown>, options: PaginateOptions): Promise<QueryResult<IApplicationDoc>>;
-}
-
-export interface CreateApplicationBody {
-  name: string;
-  email: string;
-  phone?: string;
-  experience?: string;
-  appliedJob: Types.ObjectId | string;
-  coverLetter?: string;
-  resume?: string;
-  status?: ApplicationStatus;
-}
-
-export interface UpdateApplicationStatusBody {
-  status: ApplicationStatus;
+  paginate(filter: Record<string, unknown>, options: Record<string, unknown>): Promise<QueryResult<IApplicationDoc>>;
 }

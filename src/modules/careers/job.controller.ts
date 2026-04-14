@@ -2,58 +2,54 @@ import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 
 import catchAsync from '@/shared/utils/catchAsync.js';
-import ApiError from '@/shared/utils/errors/ApiError.js';
 import pick from '@/shared/utils/pick.js';
-import { PaginateOptions } from '@/shared/utils/plugins/paginate/paginate.js';
-import responseCodes from '@/shared/utils/responseCode/responseCode.js';
+import responseCode from '@/shared/utils/responseCode/responseCode.js';
 
-import { jobService } from './index.js';
+import { jobService } from './job.service.js';
 
-export const createJob = catchAsync(async (req: Request, res: Response) => {
-  const job = await jobService.createJob({
-    ...req.body,
-    createdBy: req.user.id,
-    updatedBy: req.user.id,
-  });
-  res.status(httpStatus.CREATED).success({ job }, responseCodes.JobResponseCodes.SUCCESS, 'Job created successfully');
+const createJob = catchAsync(async (req: Request, res: Response) => {
+  const job = await jobService.createJob(req.body);
+  return res
+    .status(httpStatus.CREATED)
+    .success(job, responseCode.JobResponseCodes?.SUCCESS || 200, 'Job created successfully');
 });
 
-export const getJobs = catchAsync(async (req: Request, res: Response) => {
-  const filter = jobService.buildJobFilter(req.query);
-  const options: PaginateOptions = pick(req.query, ['sortBy', 'limit', 'page', 'projectBy']);
+const getJobs = catchAsync(async (req: Request, res: Response) => {
+  const filter = pick(req.query, ['title', 'department', 'status', 'isDeleted']);
+  const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate', 'fields', 'includeTimeStamps']);
+
+  if (req.query.search) filter.title = { $regex: req.query.search, $options: 'i' };
+
   const result = await jobService.queryJobs(filter, options);
-  res.success(result, responseCodes.JobResponseCodes.SUCCESS, 'Jobs fetched successfully');
+  return res.success(result, responseCode.JobResponseCodes?.SUCCESS || 200, 'Jobs fetched successfully');
 });
 
-export const getJob = catchAsync(async (req: Request, res: Response) => {
-  if (typeof req.params['jobId'] === 'string') {
-    const job = await jobService.getJobById(req.params['jobId']);
-    if (!job) throw new ApiError(httpStatus.NOT_FOUND, 'Job not found');
-
-    res.success({ job }, responseCodes.JobResponseCodes.SUCCESS, 'Job fetched successfully');
-  }
+const getJob = catchAsync(async (req: Request, res: Response) => {
+  const job = await jobService.getJobById(req.params.jobId);
+  if (!job) return res.status(httpStatus.NOT_FOUND).error('Job not found');
+  return res.success(job, responseCode.JobResponseCodes?.SUCCESS || 200, 'Job fetched successfully');
 });
 
-export const updateJob = catchAsync(async (req: Request, res: Response) => {
-  if (typeof req.params['jobId'] === 'string') {
-    const job = await jobService.updateJobById(req.params['jobId'], {
-      ...req.body,
-      updatedBy: req.user.id,
-    });
-    res.success({ job }, responseCodes.JobResponseCodes.SUCCESS, 'Job updated successfully');
-  }
+const updateJob = catchAsync(async (req: Request, res: Response) => {
+  const job = await jobService.updateJobById(req.params.jobId, req.body);
+  return res.success(job, responseCode.JobResponseCodes?.SUCCESS || 200, 'Job updated successfully');
 });
 
-export const deleteJob = catchAsync(async (req: Request, res: Response) => {
-  if (typeof req.params['jobId'] === 'string') {
-    await jobService.deleteJobById(req.params['jobId']);
-    res.success(null, responseCodes.JobResponseCodes.SUCCESS, 'Job deleted successfully');
-  }
+const deleteJob = catchAsync(async (req: Request, res: Response) => {
+  await jobService.deleteJobById(req.params.jobId);
+  return res.success(null, responseCode.JobResponseCodes?.SUCCESS || 200, 'Job deleted successfully');
 });
 
-export const toggleStatus = catchAsync(async (req: Request, res: Response) => {
-  if (typeof req.params['jobId'] === 'string') {
-    const job = await jobService.toggleJobStatus(req.params['jobId'], req.user.id);
-    res.success({ job }, responseCodes.JobResponseCodes.SUCCESS, 'Job status toggled successfully');
-  }
+const toggleStatus = catchAsync(async (req: Request, res: Response) => {
+  const job = await jobService.toggleJobStatus(req.params.jobId);
+  return res.success(job, responseCode.JobResponseCodes?.SUCCESS || 200, 'Job status toggled successfully');
 });
+
+export const jobController = {
+  createJob,
+  getJobs,
+  getJob,
+  updateJob,
+  deleteJob,
+  toggleStatus,
+};

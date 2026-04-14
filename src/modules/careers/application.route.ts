@@ -1,45 +1,38 @@
-import express, { Router } from 'express';
+import express from 'express';
 
-import authMiddleware from '@/modules/auth/auth.middleware.js';
+import authMiddleware from '../auth/auth.middleware.js';
 import { validateMiddleware } from '@/shared/utils/middlewares/index.js';
+import { setAuditFields } from '@/shared/middleware/setAuditFields.js';
+import { AuditMode } from '@/shared/constants/enum.constant.js';
 
-import { applicationController, applicationValidation } from './index.js';
+import { applicationController } from './application.controller.js';
+import { applicationValidation } from './application.validation.js';
 
-const router: Router = express.Router();
+const router = express.Router();
 
 // Admin routes (protected)
 router
   .route('/')
-  .get(
-    authMiddleware('getApplications'),
-    validateMiddleware(applicationValidation.getApplications),
-    applicationController.getApplications,
-  );
+  .get(authMiddleware(), validateMiddleware(applicationValidation.getApplications), applicationController.getApplications);
 
 router
   .route('/:applicationId')
-  .get(
-    authMiddleware('getApplications'),
-    validateMiddleware(applicationValidation.getApplication),
-    applicationController.getApplication,
+  .get(authMiddleware(), validateMiddleware(applicationValidation.getApplication), applicationController.getApplication)
+  .patch(
+    authMiddleware(),
+    validateMiddleware(applicationValidation.updateApplication),
+    setAuditFields({ mode: AuditMode.UPDATE }),
+    applicationController.updateApplication,
   )
   .delete(
-    authMiddleware('manageApplications'),
+    authMiddleware(),
     validateMiddleware(applicationValidation.deleteApplication),
     applicationController.deleteApplication,
-  );
-
-router
-  .route('/:applicationId/status')
-  .patch(
-    authMiddleware('manageApplications'),
-    validateMiddleware(applicationValidation.updateApplicationStatus),
-    applicationController.updateApplicationStatus,
   );
 
 // Public route (no auth required — website form submission)
 router
   .route('/public/submit')
-  .post(validateMiddleware(applicationValidation.submitApplication), applicationController.submitApplication);
+  .post(validateMiddleware(applicationValidation.submitApplication), applicationController.createApplication);
 
 export default router;
