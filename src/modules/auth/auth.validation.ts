@@ -54,7 +54,7 @@ export const verifyEmail = {
   }),
 };
 
-const phoneNumberSchema = Joi.alternatives().try(
+const mobileNumberSchema = Joi.alternatives().try(
   Joi.string()
     .trim()
     .pattern(/^[0-9]{6,15}$/),
@@ -63,14 +63,16 @@ const phoneNumberSchema = Joi.alternatives().try(
 
 export const generateOtp = {
   body: generateJoiValidation({
-    phoneNumber: phoneNumberSchema.optional(),
-    dialCode: Joi.number().integer().min(1).max(999).optional(),
-    email: Joi.string().email().optional(),
-  })
-    .or('phoneNumber', 'email')
-    .messages({
-      'object.missing': 'Please provide phone number or email',
-    }),
+    phoneNumber: mobileNumberSchema.required(),
+    dialCode: Joi.alternatives()
+      .try(
+        Joi.string()
+          .trim()
+          .pattern(/^[0-9]{1,5}$/),
+        Joi.number().integer(),
+      )
+      .optional(),
+  }),
 };
 
 export const resendOtp = {
@@ -81,7 +83,7 @@ export const resendOtp = {
 
 export const verifyOtp = {
   body: generateJoiValidation({
-    orderId: Joi.string().required(),
+    phoneNumber: mobileNumberSchema.required(),
     otp: Joi.alternatives()
       .try(
         Joi.string()
@@ -90,23 +92,24 @@ export const verifyOtp = {
         Joi.number().integer(),
       )
       .required(),
-    phoneNumber: phoneNumberSchema.optional(),
-    dialCode: Joi.number().integer().min(1).max(999).optional(),
-    email: Joi.string().email().optional(),
-  })
-    .or('phoneNumber', 'email')
-    .messages({
-      'object.missing': 'Please provide phone number or email',
-    }),
+  }),
 };
 
 export const createAccount = {
   body: generateJoiValidation({
-    verificationToken: Joi.string().required(),
+    phoneNumber: mobileNumberSchema.required(),
+    dialCode: Joi.alternatives()
+      .try(
+        Joi.string()
+          .trim()
+          .pattern(/^[0-9]{1,5}$/),
+        Joi.number().integer(),
+      )
+      .optional(),
+    email: Joi.string().email().required(),
     firstName: Joi.string().trim().required(),
     lastName: Joi.string().trim().required(),
-    birthdate: Joi.string().trim().required(),
-    email: Joi.string().email().required(),
+    birthdate: Joi.string().trim().optional(),
   }),
 };
 

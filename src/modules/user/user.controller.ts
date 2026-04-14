@@ -68,3 +68,9 @@ export const deleteUser = catchAsync(async (req: Request, res: Response) => {
   await userService.deleteUserById(userId);
   res.success(null, responseCodes.UserResponseCodes.SUCCESS, 'User deleted successfully');
 });
+
+export const resendCredentials = catchAsync(async (req: Request, res: Response) => {
+  const userId = assertValidUserId(req.params['userId']);
+  const user = await userService.resendUserCredentialsById(userId);
+  res.success({ user }, responseCodes.UserResponseCodes.SUCCESS, 'Credentials email resent successfully');
+});

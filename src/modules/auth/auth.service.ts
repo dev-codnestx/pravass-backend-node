@@ -1,84 +1,85 @@
 import crypto from 'node:crypto';
 
 import httpStatus from 'http-status';
-import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
 
 import { RoleModel } from '@/modules/roles/role.model.js';
-import config from '@/shared/config/config.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import responseCodes from '@/shared/utils/responseCode/responseCode.js';
 
 import { generateAuthTokens, verifyToken } from '../token/token.service.js';
+import { Otp } from '../otp/otp.model.js';
 import User from '../user/user.model.js';
 import { IUserDoc, IUserWithTokens } from '../user/user.interfaces.js';
 import { getUserByEmail, getUserById, updateUserById } from '../user/user.service.js';
 import { resendOtp, sendOtp } from '../otp/otp.service.js';
-import { getIdentifier, handleUserVerification, isDummyIdentifier } from './auth.helper.js';
-import { OtpPayload } from '../otp/otp.interface.js';
+import { isDummyIdentifier } from './auth.helper.js';
 
 const { AuthResponseCodes, UserResponseCodes } = responseCodes;
-
-const VERIFICATION_TOKEN_EXPIRY = '10m';
+const LEGACY_USER_EMAIL_FIELD = 'user_email' as const;
 
 type GenerateOtpInput = {
-  phoneNumber?: string | number;
+  phoneNumber: string | number;
   dialCode?: number;
-  email?: string;
 };
 
 type CreateAccountInput = {
-  verificationToken: string;
+  phoneNumber: string | number;
+  dialCode?: number;
+  email: string;
   firstName: string;
   lastName: string;
-  birthdate: string;
-  email: string;
+  birthdate?: string;
   userType?: string;
 };
 
 type AuthOtpSession = {
-  orderId: string;
+  isNewUser?: boolean;
+  message?: string;
+  orderId?: string;
   devOtpHint?: string;
 };
 
-type VerifiedOtpUser = IUserDoc & {
+type AuthUserDoc = IUserDoc & {
   isNewUser?: boolean;
-  verificationToken?: string;
+  phone?: string;
   phoneNumber?: string;
   dialCode?: number;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  birthdate?: string;
   userType?: string;
 };
 
-type AuthOtpUserPayload = {
+type AuthUserPayload = {
   id: string;
-  name: string;
-  email?: string;
-  phone: string;
-  phoneNumber?: string;
+  phoneNumber: string;
   dialCode?: number;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+  birthdate?: string;
   userType?: string;
+  fullName?: string;
   isNewUser: boolean;
-  verificationToken?: string;
 };
 
 type CreateAccountResult = {
-  user: AuthOtpUserPayload;
+  user: AuthUserPayload;
   tokens: ReturnType<typeof generateAuthTokens>;
   isNewUser: false;
 };
 
-type VerificationTokenPayload = {
-  typ: 'otp_signup';
-  phone?: string;
-  dialCode?: number;
-  email?: string;
-  userType?: string;
-  iat?: number;
-  exp?: number;
+type VerifyOtpResult = {
+  isNewUser: boolean;
+  message?: string;
+  user?: AuthUserPayload;
+  tokens?: ReturnType<typeof generateAuthTokens>;
 };
 
-const normalizePhone = (phone?: string | number): string =>
-  String(phone ?? '')
+const normalizeMobileNumber = (mobileNumber?: string | number): string =>
+  String(mobileNumber ?? '')
     .replace(/\D+/g, '')
     .trim();
 
@@ -95,80 +96,71 @@ const normalizeUserType = (userType?: string): string | undefined => {
   return normalizedUserType || undefined;
 };
 
-const stripDialCode = (fullPhone: string, dialCode = 91): string => {
-  const normalizedPhone = normalizePhone(fullPhone);
-  const dialCodeString = String(dialCode || 91);
-  if (normalizedPhone.startsWith(dialCodeString) && normalizedPhone.length > dialCodeString.length + 3)
-    return normalizedPhone.slice(dialCodeString.length);
+const findUserByMobileNumber = async (mobileNumber: string): Promise<AuthUserDoc | null> => {
+  const normalizedMobileNumber = normalizeMobileNumber(mobileNumber);
+  if (!normalizedMobileNumber) return null;
 
-  return normalizedPhone;
+  return User.findOne({
+    $or: [{ phoneNumber: normalizedMobileNumber }, { phone: normalizedMobileNumber }],
+  }).exec() as Promise<AuthUserDoc | null>;
 };
 
-const withDialCode = (phoneNumber?: string, dialCode = 91): string | undefined => {
-  if (!phoneNumber) return undefined;
-  const normalizedPhone = normalizePhone(phoneNumber);
-  if (!normalizedPhone) return undefined;
-  const dialCodeString = String(dialCode || 91);
-  return normalizedPhone.startsWith(dialCodeString) ? normalizedPhone : `${dialCodeString}${normalizedPhone}`;
+const findUserByEmailAddress = async (email: string): Promise<AuthUserDoc | null> => {
+  const normalizedEmail = normalizeEmail(email);
+  if (!normalizedEmail) return null;
+
+  return User.findOne({
+    $or: [{ email: normalizedEmail }, { [LEGACY_USER_EMAIL_FIELD]: normalizedEmail }],
+  }).exec() as Promise<AuthUserDoc | null>;
 };
 
-const resolveOtpIdentifiers = (payload: { phoneNumber?: string | number; dialCode?: number; email?: string }) => {
-  const phoneNumber = normalizePhone(payload.phoneNumber);
-  const email = normalizeEmail(payload.email);
-  const dialCode = Number(payload.dialCode || 91);
+const findOtpSessionByMobileNumber = async (mobileNumber: string) => {
+  const normalizedMobileNumber = normalizeMobileNumber(mobileNumber);
+  if (!normalizedMobileNumber) return null;
 
-  if (!phoneNumber && !email)
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Please provide phone number or email',
-      undefined,
-      true,
-      '',
-      UserResponseCodes.INVALID_INPUT,
-    );
-
-  return {
-    phoneNumber: phoneNumber || undefined,
-    email: email || undefined,
-    dialCode,
-    fullPhone: phoneNumber ? withDialCode(phoneNumber, dialCode) : undefined,
-  };
+  return Otp.findOne({
+    $or: [{ phone: Number(normalizedMobileNumber) }, { phoneNumber: Number(normalizedMobileNumber) }],
+  } as any)
+    .sort({ createdAt: -1 })
+    .exec();
 };
 
-const buildOtpUser = (
-  user: IUserDoc,
-  isNewUser: boolean,
-  verificationToken?: string,
-  fallbackDialCode = 91,
-): AuthOtpUserPayload => {
-  const fullPhone = normalizePhone(user.phoneNumber ?? user.phone);
-  const dialCode = fallbackDialCode || 91;
-  const phoneNumber = fullPhone ? stripDialCode(fullPhone, dialCode) : undefined;
+const consumeOtpSessionsByMobileNumber = async (mobileNumber: string): Promise<void> => {
+  const normalizedMobileNumber = normalizeMobileNumber(mobileNumber);
+  if (!normalizedMobileNumber) return;
+
+  await Otp.deleteMany({
+    $or: [{ phone: Number(normalizedMobileNumber) }, { phoneNumber: Number(normalizedMobileNumber) }],
+  } as any);
+};
+
+const markOtpSessionVerified = async (mobileNumber: string): Promise<void> => {
+  const otpSession = await findOtpSessionByMobileNumber(mobileNumber);
+  if (!otpSession) return;
+
+  otpSession.isVerified = true;
+  await otpSession.save();
+};
+
+const buildAuthUserPayload = (user: AuthUserDoc, isNewUser = false): AuthUserPayload => {
+  const mobileNumber = normalizeMobileNumber(user.phoneNumber ?? user.phone);
+  const firstName = String(user.firstName ?? '').trim();
+  const lastName = String(user.lastName ?? '').trim();
+  const userType = normalizeUserType(user.userType);
+  const fullName = String(user.fullName || `${firstName} ${lastName}`.trim()).trim();
 
   return {
     id: String(user._id),
-    name: user.fullName || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Traveler',
-    email: user.email || undefined,
-    phone: fullPhone || user.email || '',
-    phoneNumber,
-    dialCode: phoneNumber ? dialCode : undefined,
-    userType: normalizeUserType(user.userType),
+    phoneNumber: mobileNumber,
+    dialCode: user.dialCode,
+    email: normalizeEmail(user.email) || undefined,
+    firstName: firstName || undefined,
+    lastName: lastName || undefined,
+    birthdate: user.birthdate,
+    userType,
+    fullName: fullName || undefined,
     isNewUser,
-    verificationToken,
   };
-};
-
-const assertUserIsActive = (user: IUserDoc | null) => {
-  if (!user) return;
-  if (user.status !== 'active')
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Account is not active',
-      undefined,
-      true,
-      '',
-      AuthResponseCodes.ACCOUNT_NOT_ACTIVE,
-    );
 };
 
 let defaultRoleIdPromise: Promise<mongoose.Types.ObjectId> | null = null;
@@ -192,46 +184,6 @@ const getDefaultRoleId = (): Promise<mongoose.Types.ObjectId> => {
     });
 
   return defaultRoleIdPromise;
-};
-
-const issueVerificationToken = (payload: {
-  phone?: string;
-  dialCode?: number;
-  email?: string;
-  userType?: string;
-}): string => {
-  const tokenPayload: VerificationTokenPayload = {
-    typ: 'otp_signup',
-    phone: payload.phone,
-    dialCode: payload.dialCode,
-    email: payload.email,
-    userType: normalizeUserType(payload.userType),
-  };
-
-  return jwt.sign(tokenPayload, config.jwt.secret, { expiresIn: VERIFICATION_TOKEN_EXPIRY });
-};
-
-const readVerificationToken = (token: string): { phone?: string; dialCode?: number; email?: string; userType?: string } => {
-  try {
-    const payload = jwt.verify(token, config.jwt.secret) as VerificationTokenPayload;
-    if (payload.typ !== 'otp_signup') throw new Error('invalid token type');
-
-    return {
-      phone: normalizePhone(payload.phone),
-      dialCode: Number(payload.dialCode || 91),
-      email: normalizeEmail(payload.email) || undefined,
-      userType: normalizeUserType(payload.userType),
-    };
-  } catch {
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Verification session expired',
-      undefined,
-      true,
-      '',
-      UserResponseCodes.INVALID_INPUT,
-    );
-  }
 };
 
 /**
@@ -342,50 +294,26 @@ export const verifyEmail = async (verifyEmailToken: string): Promise<IUserDoc> =
 };
 
 export const generateUserOtp = async (payload: GenerateOtpInput): Promise<AuthOtpSession> => {
-  const { phoneNumber, email, dialCode } = resolveOtpIdentifiers(payload);
+  const mobileNumber = normalizeMobileNumber(payload.phoneNumber);
+  if (!mobileNumber)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'phoneNumber is required',
+      undefined,
+      true,
+      '',
+      UserResponseCodes.INVALID_INPUT,
+    );
 
-  const [matchedUserByPhone, matchedUserByEmail] = await Promise.all([
-    phoneNumber ? User.findOne({ phoneNumber, dialCode }).select('email status') : Promise.resolve(null),
-    email ? User.findOne({ email }).select('phoneNumber status') : Promise.resolve(null),
-  ]);
+  const matchedUser = await findUserByMobileNumber(mobileNumber);
 
-  if (phoneNumber && email) {
-    if (matchedUserByPhone && matchedUserByEmail && String(matchedUserByPhone._id) !== String(matchedUserByEmail._id))
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'Phone number or email is wrong',
-        undefined,
-        true,
-        '',
-        UserResponseCodes.INVALID_INPUT,
-      );
+  const otpSession = await sendOtp(mobileNumber, payload.dialCode);
 
-    if (matchedUserByPhone && !matchedUserByEmail)
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'Email is wrong for this phone number',
-        undefined,
-        true,
-        '',
-        UserResponseCodes.INVALID_INPUT,
-      );
-
-    if (!matchedUserByPhone && matchedUserByEmail)
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'Phone number is wrong for this email',
-        undefined,
-
-        true,
-        '',
-        UserResponseCodes.INVALID_INPUT,
-      );
-  }
-
-  assertUserIsActive(matchedUserByPhone);
-  assertUserIsActive(matchedUserByEmail);
-
-  return sendOtp(phoneNumber, dialCode, email);
+  return {
+    isNewUser: !matchedUser,
+    orderId: otpSession.orderId,
+    devOtpHint: otpSession.devOtpHint,
+  };
 };
 
 export const resendUserOtp = async (orderId: string): Promise<AuthOtpSession> => {
@@ -396,145 +324,134 @@ export const resendUserOtp = async (orderId: string): Promise<AuthOtpSession> =>
   return resendOtp(normalizedOrderId);
 };
 
-export const verifyPhoneOtp = async (userBody: OtpPayload) => {
-  const identifier = getIdentifier(userBody);
-  const userType = normalizeUserType(userBody.userType) ?? 'website';
-  const verificationResult = isDummyIdentifier(identifier.type, identifier.value)
-    ? await handleUserVerification(
-        identifier,
-        { ...userBody, userType },
-        {
-          skipOtpVerification: true,
-        },
-      )
-    : await handleUserVerification(identifier, { ...userBody, userType });
+export const verifyPhoneOtp = async (userBody: {
+  phoneNumber: string | number;
+  otp: string | number;
+}): Promise<VerifyOtpResult> => {
+  const mobileNumber = normalizeMobileNumber(userBody.phoneNumber);
+  const otp = String(userBody.otp ?? '').trim();
 
-  const userInfo = verificationResult.userInfo as VerifiedOtpUser;
-  const isNewUser = Boolean(verificationResult.isNewUser);
-
-  userInfo.isNewUser = isNewUser;
-  userInfo.phoneNumber = identifier.query?.phoneNumber ? String(identifier.query.phoneNumber) : undefined;
-  userInfo.dialCode = identifier.query?.dialCode ? Number(identifier.query.dialCode) : undefined;
-  const verificationToken = isNewUser
-    ? issueVerificationToken({
-        phone: userInfo.phoneNumber,
-        dialCode: userInfo.dialCode,
-        email: identifier.query?.email ? String(identifier.query.email) : undefined,
-        userType,
-      })
-    : undefined;
-
-  return {
-    userDoc: userInfo,
-    user: buildOtpUser(userInfo, isNewUser, verificationToken, userInfo.dialCode || 91),
-    isNewUser,
-    verificationToken,
-  };
-};
-
-export const createOtpUserAccount = async (payload: CreateAccountInput): Promise<CreateAccountResult> => {
-  const verificationToken = String(payload.verificationToken || '').trim();
-  const firstName = String(payload.firstName || '').trim();
-  const lastName = String(payload.lastName || '').trim();
-  const birthdate = String(payload.birthdate || '').trim();
-  const email = normalizeEmail(payload.email);
-
-  if (!verificationToken || !firstName || !lastName || !birthdate || !email)
+  if (!mobileNumber || !otp)
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'All account fields are required',
+      'phoneNumber and otp are required',
       undefined,
       true,
       '',
       UserResponseCodes.INVALID_INPUT,
     );
 
-  const verificationPayload = readVerificationToken(verificationToken);
-  const linkedPhone = normalizePhone(verificationPayload.phone);
-  const linkedEmail = normalizeEmail(verificationPayload.email);
-  const linkedDialCode = Number(verificationPayload.dialCode || 91);
-  const userType = normalizeUserType(payload.userType ?? verificationPayload.userType) ?? 'website';
-  const fullName = `${firstName} ${lastName}`.trim();
-  const hasEmail = Boolean(email);
-  const emailQuery = hasEmail ? { email } : null;
-
-  const [userByPhone, userByTokenEmail, userBySubmittedEmail] = await Promise.all([
-    linkedPhone ? User.findOne({ phoneNumber: linkedPhone, dialCode: linkedDialCode }) : Promise.resolve(null),
-    linkedEmail ? User.findOne({ email: linkedEmail }) : Promise.resolve(null),
-    emailQuery ? User.findOne(emailQuery) : Promise.resolve(null),
-  ]);
-
-  if (userBySubmittedEmail && userByPhone && String(userBySubmittedEmail._id) !== String(userByPhone._id))
+  const otpSession = await findOtpSessionByMobileNumber(mobileNumber);
+  if (!otpSession)
     throw new ApiError(
       httpStatus.BAD_REQUEST,
-      'Email already in use',
+      'OTP expired or not found',
       undefined,
       true,
       '',
-      UserResponseCodes.EMAIL_ALREADY_IN_USE,
+      UserResponseCodes.INVALID_OTP,
     );
 
-  if (userBySubmittedEmail && userByTokenEmail && String(userBySubmittedEmail._id) !== String(userByTokenEmail._id))
-    throw new ApiError(
-      httpStatus.BAD_REQUEST,
-      'Email already in use',
-      undefined,
-      true,
-      '',
-      UserResponseCodes.EMAIL_ALREADY_IN_USE,
-    );
+  const isDummyMobile = isDummyIdentifier('phone', mobileNumber);
 
-  let user = userByPhone || userByTokenEmail || userBySubmittedEmail;
+  if (!isDummyMobile && String(otpSession.otp) !== otp)
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid OTP', undefined, true, '', UserResponseCodes.INVALID_OTP);
 
-  if (!user) {
-    const roleId = await getDefaultRoleId();
-    user = await User.create({
-      firstName,
-      lastName,
-      fullName,
-      birthdate,
-      ...(hasEmail ? { email } : {}),
-      phoneNumber: linkedPhone || undefined,
-      dialCode: linkedPhone ? linkedDialCode : undefined,
-      userType,
-      passwordHash: crypto.randomBytes(24).toString('hex'),
-      roleId,
-      status: 'active',
-      isEmailVerified: hasEmail,
-    });
-  } else {
-    if (hasEmail && (await User.isEmailTaken(email, user._id)))
-      throw new ApiError(
-        httpStatus.BAD_REQUEST,
-        'Email already in use',
-        undefined,
-        true,
-        '',
-        UserResponseCodes.EMAIL_ALREADY_IN_USE,
-      );
+  const matchedUser = await findUserByMobileNumber(mobileNumber);
 
-    user.firstName = firstName;
-    user.lastName = lastName;
-    user.fullName = fullName;
-    user.birthdate = birthdate;
-    user.userType = userType;
-    if (hasEmail) {
-      user.email = email;
-      user.isEmailVerified = true;
-    }
-    if (!user.phoneNumber && linkedPhone) user.phoneNumber = linkedPhone;
-    if (!user.dialCode && linkedPhone) user.dialCode = linkedDialCode;
-
-    if (!hasEmail) user.isEmailVerified = Boolean(user.isEmailVerified || linkedEmail);
-    await user.save();
+  if (!matchedUser) {
+    await markOtpSessionVerified(mobileNumber);
+    return {
+      isNewUser: true,
+      message: 'Please complete registration.',
+    };
   }
 
-  const tokens = await generateAuthTokens(user);
+  await consumeOtpSessionsByMobileNumber(mobileNumber);
+  const tokens = await generateAuthTokens(matchedUser);
+
   return {
-    user: {
-      ...buildOtpUser(user, false, undefined, linkedDialCode),
-      isNewUser: false,
-    },
+    isNewUser: false,
+    user: buildAuthUserPayload(matchedUser, false),
+    tokens,
+  };
+};
+
+export const createOtpUserAccount = async (payload: CreateAccountInput): Promise<CreateAccountResult> => {
+  const mobileNumber = normalizeMobileNumber(payload.phoneNumber);
+  const userEmail = normalizeEmail(payload.email);
+  const firstName = String(payload.firstName || '').trim();
+  const lastName = String(payload.lastName || '').trim();
+  const userType = normalizeUserType(payload.userType) ?? 'website';
+  const birthdate = String(payload.birthdate || '').trim();
+  const dialCode = Number(payload.dialCode ?? 91) || 91;
+
+  if (!mobileNumber || !userEmail || !firstName || !lastName)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'phoneNumber, email, firstName, and lastName are required',
+      undefined,
+      true,
+      '',
+      UserResponseCodes.INVALID_INPUT,
+    );
+
+  const verifiedOtpSession = await findOtpSessionByMobileNumber(mobileNumber);
+  if (!verifiedOtpSession || !verifiedOtpSession.isVerified)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Please verify OTP before completing registration.',
+      undefined,
+      true,
+      '',
+      UserResponseCodes.INVALID_INPUT,
+    );
+
+  const existingEmailUser = await findUserByEmailAddress(userEmail);
+  if (existingEmailUser)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Email already registered.',
+      undefined,
+      true,
+      '',
+      UserResponseCodes.EMAIL_ALREADY_IN_USE,
+    );
+
+  const existingMobileUser = await findUserByMobileNumber(mobileNumber);
+  if (existingMobileUser)
+    throw new ApiError(
+      httpStatus.BAD_REQUEST,
+      'Phone already registered.',
+      undefined,
+      true,
+      '',
+      UserResponseCodes.INVALID_INPUT,
+    );
+
+  const roleId = await getDefaultRoleId();
+  const fullName = `${firstName} ${lastName}`.trim();
+
+  const user = (await User.create({
+    firstName,
+    lastName,
+    fullName,
+    email: userEmail,
+    phoneNumber: mobileNumber,
+    dialCode,
+    birthdate: birthdate || undefined,
+    userType,
+    passwordHash: crypto.randomBytes(24).toString('hex'),
+    roleId,
+    status: 'active',
+    isEmailVerified: false,
+  } as any)) as unknown as AuthUserDoc;
+
+  await consumeOtpSessionsByMobileNumber(mobileNumber);
+  const tokens = await generateAuthTokens(user);
+
+  return {
+    user: buildAuthUserPayload(user, false),
     tokens,
     isNewUser: false,
   };

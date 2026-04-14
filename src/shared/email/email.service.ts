@@ -156,7 +156,7 @@ export const loadEmailTemplateFromFile = (templateName: string, replacements: an
   return renderedTemplate;
 };
 
-export const sendTemplatedEmail = async ({
+export async function sendTemplatedEmail({
   to,
   subject,
   templateName,
@@ -166,7 +166,20 @@ export const sendTemplatedEmail = async ({
   subject: string;
   templateName: string;
   replacements: Record<string, any>;
-}) => {
+}): Promise<void> {
   const html = loadEmailTemplateFromFile(templateName, replacements);
   await sendNodeMailerEmail(to, subject, html);
+}
+
+export const sendUserCredentialsEmail = async (to: string, userName: string, password: string): Promise<void> => {
+  await sendTemplatedEmail({
+    to,
+    subject: 'Your Pravass account credentials',
+    templateName: 'user-credentials',
+    replacements: {
+      userName,
+      password,
+      loginUrl: `http://${config.clientUrl}/auth/login`,
+    },
+  });
 };

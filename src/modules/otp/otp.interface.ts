@@ -2,6 +2,7 @@ import { Document } from 'mongoose';
 
 export interface IOtp {
   phone?: number;
+  phoneNumber?: number;
   dialCode?: number;
   email?: string;
   otp: number;
@@ -35,6 +36,7 @@ export interface OtpPayload {
 export interface OtpRecord {
   _id: string;
   phone?: string;
+  phoneNumber?: string;
   dialCode?: number;
   email?: string;
   otp: string;
