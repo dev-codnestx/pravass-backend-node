@@ -7,7 +7,7 @@ import importPlugin from 'eslint-plugin-import';
 export default [
   js.configs.recommended,
   {
-    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.min.js', 'build/**', '.nyc_output/**'],
+    ignores: ['dist/**', 'node_modules/**', 'coverage/**', '*.min.js', 'build/**', '.nyc_output/**', 'tsup.*.ts'],
   },
   {
     files: ['**/*.{ts,tsx}'],
