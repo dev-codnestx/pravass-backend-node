@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { Document, Model, PipelineStage, Schema, SortOrder } from 'mongoose';
 
 export interface PaginateOptions {

@@ -53,6 +53,21 @@ const entitiesAndCustomCodes: EntityDefinition[] = [
     name: 'Session',
   },
   {
+    name: 'Blog',
+    customCodes: ['TITLE_ALREADY_EXISTS'],
+  },
+  {
+    name: 'Faq',
+    customCodes: ['QUESTION_ALREADY_EXISTS'],
+  },
+  {
+    name: 'Job',
+    customCodes: ['TITLE_ALREADY_EXISTS'],
+  },
+  {
+    name: 'Application',
+  },
+  {
     name: 'Banner',
   },
 ];
