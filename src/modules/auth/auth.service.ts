@@ -16,6 +16,7 @@ import { resendOtp, sendOtp } from '../otp/otp.service.js';
 import { isDummyIdentifier } from './auth.helper.js';
 
 const { AuthResponseCodes, UserResponseCodes } = responseCodes;
+const LEGACY_USER_EMAIL_FIELD = 'user_email' as const;
 
 type GenerateOtpInput = {
   phoneNumber: string | number;
@@ -109,7 +110,7 @@ const findUserByEmailAddress = async (email: string): Promise<AuthUserDoc | null
   if (!normalizedEmail) return null;
 
   return User.findOne({
-    $or: [{ email: normalizedEmail }, { user_email: normalizedEmail }],
+    $or: [{ email: normalizedEmail }, { [LEGACY_USER_EMAIL_FIELD]: normalizedEmail }],
   }).exec() as Promise<AuthUserDoc | null>;
 };
 

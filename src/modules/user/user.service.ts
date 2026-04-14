@@ -10,6 +10,8 @@ import responseCodes from '@/shared/utils/responseCode/responseCode.js';
 
 import { IUserDoc, NewCreatedUser, NewRegisteredUser, UpdateUserBody } from './user.interfaces.js';
 
+const LEGACY_USER_EMAIL_FIELD = 'user_email' as const;
+
 const ROLE_POPULATE = {
   path: 'roleId',
   select: 'name code description permissions isSystem status',
@@ -61,7 +63,8 @@ const normalizeUserPayload = (payload: NewCreatedUser | NewRegisteredUser | Upda
   if ('dialCode' in payload && payload.dialCode !== undefined && payload.dialCode !== null)
     normalizedPayload.dialCode = Number(payload.dialCode);
 
-  if ('user_email' in payload && payload.user_email) normalizedPayload.email = normalizeEmail(payload.user_email);
+  if (LEGACY_USER_EMAIL_FIELD in payload && payload[LEGACY_USER_EMAIL_FIELD])
+    normalizedPayload.email = normalizeEmail(payload[LEGACY_USER_EMAIL_FIELD]);
 
   if ('first_name' in payload && payload.first_name) normalizedPayload.firstName = String(payload.first_name).trim();
 
@@ -193,7 +196,7 @@ export const queryUsers = (filter: Record<string, any>, options: PaginateOptions
 export const getUserByEmail = async (email: string): Promise<IUserDoc | null> =>
   populateRole(
     User.findOne({
-      $or: [{ email: email.toLowerCase().trim() }, { ['user_email']: email.toLowerCase().trim() }],
+      $or: [{ email: email.toLowerCase().trim() }, { [LEGACY_USER_EMAIL_FIELD]: email.toLowerCase().trim() }],
     }).select('+passwordHash'),
   );
 

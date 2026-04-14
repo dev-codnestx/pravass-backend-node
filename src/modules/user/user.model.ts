@@ -11,6 +11,8 @@ import { sanitizeUser } from '@/shared/utils/common/auth.utils.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 import { IUser, IUserModel } from './user.interfaces.js';
 
+const LEGACY_USER_EMAIL_FIELD = 'user_email' as const;
+
 const userSchema = new Schema<IUser>(
   {
     fullName: { type: String, trim: true },
@@ -83,7 +85,7 @@ userSchema.methods.verifyOTP = verifyOTP;
 // Statics
 userSchema.statics.isEmailTaken = async function (email: string, excludeUserId?: Types.ObjectId) {
   const user = await this.findOne({
-    $or: [{ email }, { user_email: email }],
+    $or: [{ email }, { [LEGACY_USER_EMAIL_FIELD]: email }],
     _id: { $ne: excludeUserId },
   });
   return !!user;
