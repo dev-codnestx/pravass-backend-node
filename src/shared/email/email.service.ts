@@ -1,7 +1,16 @@
 import nodemailer from 'nodemailer';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import handlebars from 'handlebars';
 
 import config from '@/shared/config/config.js';
 import { Message } from '@/shared/email/email.interfaces.js';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const dirWithoutDist = __dirname.includes('dist') ? __dirname.replace(/dist/, '') : __dirname;
 
 export const transport = nodemailer.createTransport(config.email.smtp);
 /* istanbul ignore next */
@@ -120,4 +129,44 @@ export const sendAccountCreated = async (to: string, name: string): Promise<void
   <p>Regards,</p>
   <p><strong>Team</strong></p></div>`;
   await sendEmail(to, subject, text, html);
+};
+
+export const sendNodeMailerEmail = async (toEmail: string, subject: string, htmlContent: string) => {
+  const mailOptions = {
+    from: config.email.from,
+    to: toEmail,
+    subject: subject,
+    html: htmlContent,
+  };
+
+  try {
+    await transport.sendMail(mailOptions);
+    console.log('Email sent successfully to', toEmail);
+  } catch (error) {
+    console.error('Error sending email:', error);
+  }
+};
+
+export const loadEmailTemplateFromFile = (templateName: string, replacements: any) => {
+  const emailTemplatePath = config.env === 'development' ? '../emailTemplate' : 'src/shared/emailTemplate';
+  const filePath = path.join(dirWithoutDist, emailTemplatePath, `${templateName}.html`);
+  const templateSource = fs.readFileSync(filePath, 'utf-8');
+  const template = handlebars.compile(templateSource);
+  const renderedTemplate = template(replacements);
+  return renderedTemplate;
+};
+
+export const sendTemplatedEmail = async ({
+  to,
+  subject,
+  templateName,
+  replacements,
+}: {
+  to: string;
+  subject: string;
+  templateName: string;
+  replacements: Record<string, any>;
+}) => {
+  const html = loadEmailTemplateFromFile(templateName, replacements);
+  await sendNodeMailerEmail(to, subject, html);
 };

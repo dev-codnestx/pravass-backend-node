@@ -1,9 +1,8 @@
 import { Schema, model, Document, Types } from 'mongoose';
-import { APP_MODULES, APP_ACTIONS } from '../permissions/permission.constants.js';
 
 export interface IRolePermission {
-  module: (typeof APP_MODULES)[number];
-  actions: (typeof APP_ACTIONS)[number][];
+  module: string;
+  actions: string[];
 }
 
 export interface IRole extends Document {
@@ -21,8 +20,8 @@ export interface IRole extends Document {
 
 const rolePermissionSchema = new Schema<IRolePermission>(
   {
-    module: { type: String, enum: APP_MODULES, required: true },
-    actions: [{ type: String, enum: APP_ACTIONS, required: true }],
+    module: { type: String, required: true, trim: true },
+    actions: [{ type: String, required: true, trim: true }],
   },
   { _id: false },
 );

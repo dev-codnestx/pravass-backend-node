@@ -38,3 +38,13 @@ export interface IAuthUser extends Omit<IUser, 'passwordHash'> {
   role: IRole;
   permissions: PermissionKey[];
 }
+
+export type Identifier = {
+  type: 'phone' | 'email';
+  value: string;
+  query: {
+    phoneNumber?: string;
+    dialCode?: number;
+    email?: string;
+  };
+};

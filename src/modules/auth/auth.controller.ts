@@ -22,6 +22,11 @@ const authCookieOptions = {
 const getRefreshTokenFromRequest = (req: Request): string | undefined =>
   (req.body?.refreshToken as string | undefined) || req.cookies?.refreshToken;
 
+const getClientTypeFromRequest = (req: Request): string => {
+  const clientType = req.get('x-client-type');
+  return (clientType ? clientType.trim().toLowerCase() : 'website') || 'website';
+};
+
 const setAuthCookies = (res: Response, tokens: any) => {
   res.cookie('token', tokens.access.token, {
     ...authCookieOptions,
@@ -104,4 +109,46 @@ export const logoutAll = catchAsync(async (req: Request, res: Response) => {
 export const getMe = catchAsync(async (req: Request, res: Response) => {
   const user = await userService.getUserById(req.user._id);
   res.success({ user }, responseCodes.AuthResponseCodes.SUCCESS, 'Current user fetched successfully');
+});
+
+export const generateOtp = catchAsync(async (req: Request, res: Response) => {
+  const otpSession = await authService.generateUserOtp(req.body);
+  res.success(otpSession, responseCodes.AuthResponseCodes.SUCCESS, 'Otp sent successfully');
+});
+
+export const resendOtp = catchAsync(async (req: Request, res: Response) => {
+  const otpSession = await authService.resendUserOtp(req.body.orderId);
+  res.success(otpSession, responseCodes.AuthResponseCodes.SUCCESS, 'Otp resend successfully');
+});
+
+export const verifyOtp = catchAsync(async (req: Request, res: Response) => {
+  const result = await authService.verifyPhoneOtp({
+    ...req.body,
+    userType: getClientTypeFromRequest(req),
+  });
+  const tokens = await tokenService.generateAuthTokens(result.userDoc);
+  if (tokens) setAuthCookies(res, tokens);
+
+  res.success(
+    {
+      user: {
+        ...result.user,
+        verificationToken: result.verificationToken,
+      },
+      tokens,
+      isNewUser: result.isNewUser,
+      verificationToken: result.verificationToken,
+    },
+    responseCodes.AuthResponseCodes.SUCCESS,
+    'Otp verified successfully',
+  );
+});
+
+export const createAccount = catchAsync(async (req: Request, res: Response) => {
+  const payload = await authService.createOtpUserAccount({
+    ...req.body,
+    userType: getClientTypeFromRequest(req),
+  });
+  setAuthCookies(res, payload.tokens);
+  res.success(payload, responseCodes.AuthResponseCodes.SUCCESS, 'Account created successfully');
 });

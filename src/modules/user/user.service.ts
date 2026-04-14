@@ -8,6 +8,23 @@ import responseCodes from '@/shared/utils/responseCode/responseCode.js';
 
 import { IUserDoc, NewCreatedUser, NewRegisteredUser, UpdateUserBody } from './user.interfaces.js';
 
+const ROLE_POPULATE = {
+  path: 'roleId',
+  select: 'name code description permissions isSystem status',
+};
+
+const populateRole = <T extends { populate: (path: unknown, select?: unknown) => T }>(query: T) =>
+  query.populate(ROLE_POPULATE);
+
+/**
+ * Get user by id
+ * @param {mongoose.Types.ObjectId} id
+ * @returns {Promise<IUserDoc | null>}
+ */
+export async function getUserById(id: mongoose.Types.ObjectId): Promise<IUserDoc | null> {
+  return populateRole(User.findById(id));
+}
+
 const normalizeUserPayload = (payload: NewCreatedUser | NewRegisteredUser | UpdateUserBody) => {
   const normalizedPayload: Record<string, unknown> = { ...payload };
 
@@ -20,6 +37,22 @@ const normalizeUserPayload = (payload: NewCreatedUser | NewRegisteredUser | Upda
     normalizedPayload.passwordHash = payload.password;
     delete normalizedPayload.password;
   }
+
+  if ('phone' in payload) {
+    normalizedPayload.phoneNumber = typeof payload.phone === 'string' ? payload.phone.trim() : payload.phone;
+    delete normalizedPayload.phone;
+  }
+
+  if ('avatarUrl' in payload) normalizedPayload.avatarUrl = payload.avatarUrl;
+
+  if ('roleId' in payload && payload.roleId) normalizedPayload.roleId = payload.roleId;
+
+  if ('status' in payload && payload.status) normalizedPayload.status = payload.status;
+
+  const firstName = typeof normalizedPayload.firstName === 'string' ? normalizedPayload.firstName.trim() : '';
+  const lastName = typeof normalizedPayload.lastName === 'string' ? normalizedPayload.lastName.trim() : '';
+  const derivedFullName = `${firstName} ${lastName}`.trim();
+  if (!normalizedPayload.fullName && derivedFullName) normalizedPayload.fullName = derivedFullName;
 
   return normalizedPayload;
 };
@@ -40,7 +73,9 @@ export const createUser = async (userBody: NewCreatedUser): Promise<IUserDoc> =>
       responseCodes.UserResponseCodes.EMAIL_ALREADY_IN_USE,
     );
 
-  return User.create(normalizeUserPayload(userBody));
+  const created = await User.create(normalizeUserPayload(userBody));
+  const populated = await getUserById(created._id);
+  return populated ?? created;
 };
 
 /**
@@ -59,7 +94,9 @@ export const registerUser = async (userBody: NewRegisteredUser): Promise<IUserDo
       responseCodes.UserResponseCodes.EMAIL_ALREADY_IN_USE,
     );
 
-  return User.create(normalizeUserPayload(userBody));
+  const created = await User.create(normalizeUserPayload(userBody));
+  const populated = await getUserById(created._id);
+  return populated ?? created;
 };
 
 /**
@@ -72,14 +109,7 @@ export const registerUser = async (userBody: NewRegisteredUser): Promise<IUserDo
 // TODO: later add correct type
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export const queryUsers = (filter: Record<string, any>, options: PaginateOptions): Promise<QueryResult> =>
-  Promise.resolve(User.paginate(filter, options as any));
-
-/**
- * Get user by id
- * @param {mongoose.Types.ObjectId} id
- * @returns {Promise<IUserDoc | null>}
- */
-export const getUserById = async (id: mongoose.Types.ObjectId): Promise<IUserDoc | null> => User.findById(id);
+  Promise.resolve(User.paginate(filter, { ...(options as any), populate: options.populate || 'roleId' }));
 
 /**
  * Get user by email
@@ -87,7 +117,7 @@ export const getUserById = async (id: mongoose.Types.ObjectId): Promise<IUserDoc
  * @returns {Promise<IUserDoc | null>}
  */
 export const getUserByEmail = async (email: string): Promise<IUserDoc | null> =>
-  User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
+  populateRole(User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash'));
 
 /**
  * Update user by id
@@ -122,7 +152,8 @@ export const updateUserById = async (
 
   Object.assign(user, normalizeUserPayload(updateBody));
   await user.save();
-  return user;
+  const populated = await getUserById(user._id);
+  return populated ?? user;
 };
 
 /**
