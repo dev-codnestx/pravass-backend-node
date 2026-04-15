@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 
 import config from '@/shared/config/config.js';
+import logger from '@/shared/config/logger.js';
 
 interface MongooseConfig {
   protocol: string;
@@ -16,24 +17,25 @@ const connectToDatabase = async (): Promise<void> => {
   const { protocol, username, password, host, name } = mongooseConfig;
 
   const mongoURI = `${protocol}://${username}:${encodeURIComponent(password)}@${host}/${name}?authSource=admin`;
+  const safeMongoURI = `${protocol}://${username}:***@${host}/${name}?authSource=admin`;
 
   const fallbackURI = 'mongodb://127.0.0.1:27017/test_db';
 
   try {
-    console.info(`🔌 Attempting primary MongoDB connection: ${mongoURI}`);
+    logger.info(`Attempting primary MongoDB connection: ${safeMongoURI}`);
     await mongoose.connect(mongoURI);
-    console.info('✅ Successfully connected to primary MongoDB!');
+    logger.info('Successfully connected to primary MongoDB');
   } catch (error: unknown) {
-    if (error instanceof Error) console.warn('❌ Primary MongoDB connection failed:', error.message);
-    else console.warn('❌ Unknown error during primary MongoDB connection.');
+    if (error instanceof Error) logger.error('Primary MongoDB connection failed: %s', error.message);
+    else logger.error('Unknown error during primary MongoDB connection');
 
     try {
-      console.info(`🔁 Attempting fallback MongoDB connection: ${fallbackURI}`);
+      logger.info(`Attempting fallback MongoDB connection: ${fallbackURI}`);
       await mongoose.connect(fallbackURI);
-      console.info('✅ Successfully connected to fallback MongoDB!');
+      logger.info('Successfully connected to fallback MongoDB');
     } catch (fallbackError: unknown) {
-      if (fallbackError instanceof Error) console.warn('❌ Fallback MongoDB connection failed:', fallbackError.message);
-      else console.warn('❌ Unknown error during fallback MongoDB connection.');
+      if (fallbackError instanceof Error) logger.error('Fallback MongoDB connection failed: %s', fallbackError.message);
+      else logger.error('Unknown error during fallback MongoDB connection');
 
       process.exit(1);
     }

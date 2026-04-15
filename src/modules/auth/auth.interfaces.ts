@@ -1,4 +1,4 @@
-import { IUser } from '../user/user.model.js';
+import { IUser } from '../user/user.interfaces.js';
 import { IRole } from '../roles/role.model.js';
 import { PermissionKey } from '../permissions/permission.constants.js';
 
@@ -38,3 +38,13 @@ export interface IAuthUser extends Omit<IUser, 'passwordHash'> {
   role: IRole;
   permissions: PermissionKey[];
 }
+
+export type Identifier = {
+  type: 'phone' | 'email';
+  value: string;
+  query: {
+    phoneNumber?: string;
+    dialCode?: number;
+    email?: string;
+  };
+};

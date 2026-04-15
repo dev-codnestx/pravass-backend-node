@@ -35,6 +35,16 @@ const envVarsSchema = Joi.object()
     SMTP_PASSWORD: Joi.string().description('password for email server'),
     EMAIL_FROM: Joi.string().description('the from field in the emails sent by the app'),
     FRONTEND_URL: Joi.string().required().description('Client url'),
+    AWS_ACCESS_KEY_ID: Joi.string().description('AWS Access Key ID is missing'),
+    AWS_SECRET_ACCESS_KEY: Joi.string().description('AWS Secret Access Key is missing'),
+    AWS_REGION: Joi.string().description('AWS Region is missing'),
+    AWS_BUCKET_NAME: Joi.string().description('AWS Bucket Name is missing'),
+    FAST_2_SMS_API_KEY: Joi.string().allow('').optional().description('Fast2SMS API key'),
+    FAST_2_SMS_API_URL: Joi.string().allow('').optional().description('Fast2SMS API URL'),
+    FAST_2_SMS_SENDER_ID: Joi.string().allow('').optional().description('Fast2SMS sender id'),
+    FAST_2_SMS_MSG_ID: Joi.string().allow('').optional().description('Fast2SMS message id'),
+    FAST_2_SMS_ROUTE: Joi.string().allow('').optional().description('Fast2SMS route'),
+    ADMIN_FRONTEND_URL: Joi.string().required().description('Admin Client url'),
   })
   .unknown();
 
@@ -77,6 +87,22 @@ const config = {
     from: envVars.EMAIL_FROM,
   },
   clientUrl: envVars.FRONTEND_URL,
+  adminClientUrl: envVars.ADMIN_FRONTEND_URL,
+
+  // AWS configuration
+  aws: {
+    accessKeyId: envVars.AWS_ACCESS_KEY_ID,
+    secretAccessKey: envVars.AWS_SECRET_ACCESS_KEY,
+    region: envVars.AWS_REGION,
+    bucketName: envVars.AWS_BUCKET_NAME,
+  },
+  fast2sms: {
+    apiKey: envVars.FAST_2_SMS_API_KEY,
+    apiUrl: envVars.FAST_2_SMS_API_URL,
+    senderId: envVars.FAST_2_SMS_SENDER_ID,
+    msgId: envVars.FAST_2_SMS_MSG_ID,
+    route: envVars.FAST_2_SMS_ROUTE,
+  },
 };
 
 export default config;

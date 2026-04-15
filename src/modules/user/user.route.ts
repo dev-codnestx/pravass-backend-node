@@ -19,4 +19,12 @@ router
   .patch(authMiddleware('manageUsers'), validateMiddleware(userValidation.updateUser), userController.updateUser)
   .delete(authMiddleware('manageUsers'), validateMiddleware(userValidation.deleteUser), userController.deleteUser);
 
+router
+  .route('/:userId/resend-credentials')
+  .post(
+    authMiddleware('manageUsers'),
+    validateMiddleware(userValidation.resendCredentials),
+    userController.resendCredentials,
+  );
+
 export default router;

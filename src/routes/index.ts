@@ -7,8 +7,11 @@ import jobRoute from '@/modules/careers/job.route.js';
 import faqRoute from '@/modules/faq/faq.route.js';
 import bannerRoute from '@/modules/banner/banner.route.js';
 import mastersRoute from '@/modules/masters/masters.route.js';
+import permissionRoute from '@/modules/permissions/permission.route.js';
+import roleRoute from '@/modules/roles/role.route.js';
 import userRoute from '@/modules/user/user.route.js';
 import testimonialRoute from '@/modules/testimonial/testimonial.route.js';
+import s3Route from '@/shared/core/s3/s3.route.js';
 import supportRoute from '@/modules/support/support.route.js';
 
 const router = express.Router();
@@ -29,12 +32,24 @@ const setupRoutes = () => {
       route: userRoute,
     },
     {
+      path: '/permissions',
+      route: permissionRoute,
+    },
+    {
+      path: '/roles',
+      route: roleRoute,
+    },
+    {
       path: '/masters',
       route: mastersRoute,
     },
     {
       path: '/testimonials',
       route: testimonialRoute,
+    },
+    {
+      path: '/upload',
+      route: s3Route,
     },
     {
       path: '/blogs',

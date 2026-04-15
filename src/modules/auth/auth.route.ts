@@ -19,5 +19,9 @@ router.post('/reset-password', validate(authValidation.resetPassword), authContr
 router.post('/send-verification-email', authMiddleware(), authController.sendVerificationEmail);
 router.post('/verify-email', validate(authValidation.verifyEmail), authController.verifyEmail);
 router.get('/me', authMiddleware(), authController.getMe);
+router.post('/user/generate-otp', validate(authValidation.generateOtp), authController.generateOtp);
+router.post('/user/resend-otp', validate(authValidation.resendOtp), authController.resendOtp);
+router.post('/user/verify-otp', validate(authValidation.verifyOtp), authController.verifyOtp);
+router.post('/user/create-account', validate(authValidation.createAccount), authController.createAccount);
 
 export default router;

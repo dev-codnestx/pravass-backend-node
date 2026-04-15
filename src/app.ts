@@ -7,6 +7,7 @@ import passport from 'passport';
 
 import routes from '@/routes/index.js';
 import config from '@/shared/config/config.js';
+import { httpErrorLogger, httpSuccessLogger } from '@/shared/config/logger.js';
 import jwtStrategy from '@/shared/config/passport.js';
 import { ApiError, errorConverter, errorHandler } from '@/shared/utils/errors/index.js';
 import { authLimiter } from '@/shared/utils/index.js';
@@ -25,6 +26,10 @@ app.use(
   }),
 );
 // app.options('*', cors());
+
+// log incoming API requests
+app.use(httpSuccessLogger);
+app.use(httpErrorLogger);
 
 // parse json request body
 app.use(express.json());

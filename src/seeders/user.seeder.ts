@@ -1,6 +1,9 @@
 import { UserModel } from '../modules/user/user.model.js';
 import { RoleModel } from '../modules/roles/role.model.js';
 
+const SUPER_ADMIN_EMAIL = 'admin@pravass.com';
+const SUPER_ADMIN_USER_TYPE = 'superadmin';
+
 /**
  * Seed super admin user
  */
@@ -10,17 +13,18 @@ export const seedSuperAdmin = async (): Promise<void> => {
   const superAdminRole = await RoleModel.findOne({ code: 'SUPER_ADMIN' });
   if (!superAdminRole) throw new Error('SUPER_ADMIN role not found. Please run role seeder first.');
 
-  const existingSuperAdmin = await UserModel.findOne({ email: 'admin@pravass.com' });
+  const existingSuperAdmin = await UserModel.findOne({ email: SUPER_ADMIN_EMAIL });
 
   if (!existingSuperAdmin) {
     const defaultPassword = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123456';
 
     const superAdmin = await UserModel.create({
       fullName: 'Super Administrator',
-      email: 'admin@pravass.com',
+      email: SUPER_ADMIN_EMAIL,
       phone: '+1234567890',
       passwordHash: defaultPassword,
       roleId: superAdminRole._id,
+      userType: SUPER_ADMIN_USER_TYPE,
       status: 'active',
       isEmailVerified: true,
       failedLoginAttempts: 0,
@@ -33,9 +37,9 @@ export const seedSuperAdmin = async (): Promise<void> => {
     console.info(`🔑 Default password: ${defaultPassword}`);
     console.info('⚠️  Please change the default password after first login!');
   } else {
-    // Update super admin to ensure it has SUPER_ADMIN role
+    // Keep existing super admin role/status, but do not overwrite userType.
     await UserModel.updateOne(
-      { email: 'admin@pravass.com' },
+      { email: SUPER_ADMIN_EMAIL },
       {
         $set: {
           roleId: superAdminRole._id,

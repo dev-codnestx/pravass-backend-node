@@ -1,53 +1,75 @@
 import Joi from 'joi';
 
 import { objectId, password } from '@/shared/validations/custom.validation.js';
+import { generateJoiValidation } from '@/shared/validations/generateJoiValidation.js';
 
-import { NewCreatedUser } from './user.interfaces.js';
+const statusSchema = Joi.string().valid('active', 'inactive', 'locked', 'Active', 'Inactive', 'Locked');
 
-// TODO: later add correct type
-/* eslint-disable @typescript-eslint/no-explicit-any */
-const createUserBody: Partial<Record<keyof NewCreatedUser, any>> = {
+const createUserBody = {
   email: Joi.string().required().email(),
   password: Joi.string().required().custom(password),
-  name: Joi.string().required(),
+  fullName: Joi.string().required(),
+  phoneNumber: Joi.number().required(),
+  dialCode: Joi.number().integer().default(91),
+  roleId: Joi.string().required().custom(objectId),
+  status: statusSchema.required(),
+  profileImage: Joi.string().allow(''),
 };
 
 export const createUser = {
-  body: Joi.object().keys(createUserBody),
+  body: generateJoiValidation(createUserBody),
 };
 
 export const getUsers = {
-  query: Joi.object().keys({
-    name: Joi.string(),
-    role: Joi.string(),
-    sortBy: Joi.string(),
-    projectBy: Joi.string(),
-    limit: Joi.number().integer(),
-    page: Joi.number().integer(),
-  }),
+  query: generateJoiValidation(
+    {
+      name: Joi.string(),
+      search: Joi.string().allow(''),
+      role: Joi.string(),
+      roleId: Joi.string().custom(objectId),
+      sortBy: Joi.string(),
+      projectBy: Joi.string(),
+      populate: Joi.string(),
+      limit: Joi.number().integer(),
+      page: Joi.number().integer(),
+    },
+    { allowUnknown: true },
+  ),
 };
 
 export const getUser = {
-  params: Joi.object().keys({
+  params: generateJoiValidation({
     userId: Joi.string().custom(objectId),
   }),
 };
 
 export const updateUser = {
-  params: Joi.object().keys({
+  params: generateJoiValidation({
     userId: Joi.required().custom(objectId),
   }),
-  body: Joi.object()
-    .keys({
+  body: generateJoiValidation(
+    {
       email: Joi.string().email(),
       password: Joi.string().custom(password),
       name: Joi.string(),
-    })
-    .min(1),
+      phoneNumber: Joi.string(),
+      dialCode: Joi.number().integer(),
+      roleId: Joi.string().custom(objectId),
+      status: statusSchema,
+      profileImage: Joi.string().allow(''),
+    },
+    { minFields: 1 },
+  ),
 };
 
 export const deleteUser = {
-  params: Joi.object().keys({
+  params: generateJoiValidation({
+    userId: Joi.string().custom(objectId),
+  }),
+};
+
+export const resendCredentials = {
+  params: generateJoiValidation({
     userId: Joi.string().custom(objectId),
   }),
 };

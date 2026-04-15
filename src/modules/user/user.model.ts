@@ -1,4 +1,4 @@
-import { Schema, model, Document, Types } from 'mongoose';
+import { Schema, model, Types } from 'mongoose';
 import {
   passwordHashingMiddleware,
   comparePasswordMethod,
@@ -9,46 +9,28 @@ import {
 } from '@/shared/utils/common/model.utils.js';
 import { sanitizeUser } from '@/shared/utils/common/auth.utils.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
-import { IUserModel } from './user.interfaces.js';
+import { IUser, IUserModel } from './user.interfaces.js';
 
-export interface IUser extends Document {
-  fullName: string;
-  email: string;
-  phone?: string;
-  passwordHash: string;
-  password?: string;
-  name?: string;
-  roleId: Types.ObjectId;
-  status: 'active' | 'inactive' | 'locked';
-  isEmailVerified: boolean;
-  lastLoginAt?: Date;
-  failedLoginAttempts: number;
-  mustChangePassword: boolean;
-  twoFactorEnabled: boolean;
-  refreshTokenVersion: number;
-  createdAt: Date;
-  updatedAt: Date;
-  isPasswordMatch(candidatePassword: string): Promise<boolean>;
-  incrementFailedAttempts(maxAttempts?: number): Promise<boolean>;
-  resetFailedAttempts(): Promise<void>;
-  generateOTP(channel: 'email' | 'sms', purpose: string, OtpModel: any): Promise<string>;
-  verifyOTP(channel: 'email' | 'sms', purpose: string, code: string, OtpModel: any): Promise<boolean>;
-}
+const LEGACY_USER_EMAIL_FIELD = 'user_email' as const;
 
 const userSchema = new Schema<IUser>(
   {
-    fullName: { type: String, required: true, trim: true },
+    fullName: { type: String, trim: true },
+    firstName: { type: String, trim: true },
+    lastName: { type: String, trim: true },
+    birthdate: { type: String, trim: true },
     email: {
       type: String,
-      required: true,
-      unique: true, // Automatically creates index
       lowercase: true,
       trim: true,
       set: (val: string) => val.toLowerCase().trim(),
     },
-    phone: { type: String, trim: true },
-    passwordHash: { type: String, required: true, select: false },
-    roleId: { type: Schema.Types.ObjectId, ref: 'Role', required: true, index: true },
+    phoneNumber: { type: String, trim: true },
+    dialCode: { type: Number, default: 91 },
+    isNewUser: { type: Boolean, default: false },
+    userType: { type: String, trim: true },
+    passwordHash: { type: String, select: false },
+    roleId: { type: Schema.Types.ObjectId, ref: 'Role', index: true },
     status: {
       type: String,
       enum: ['active', 'inactive', 'locked'],
@@ -61,6 +43,7 @@ const userSchema = new Schema<IUser>(
     mustChangePassword: { type: Boolean, default: false },
     twoFactorEnabled: { type: Boolean, default: false },
     refreshTokenVersion: { type: Number, default: 0 },
+    profileImage: { type: String },
   },
   {
     timestamps: true,
@@ -68,8 +51,18 @@ const userSchema = new Schema<IUser>(
   },
 );
 
+userSchema.index(
+  { email: 1 },
+  {
+    unique: true,
+    partialFilterExpression: {
+      email: { $type: 'string', $ne: '' },
+    },
+  },
+);
+
 userSchema.plugin(toJSON);
-userSchema.plugin(paginate);
+userSchema.plugin(paginate as any);
 
 // Virtuals
 userSchema
@@ -91,7 +84,18 @@ userSchema.methods.verifyOTP = verifyOTP;
 
 // Statics
 userSchema.statics.isEmailTaken = async function (email: string, excludeUserId?: Types.ObjectId) {
-  const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
+  const user = await this.findOne({
+    $or: [{ email }, { [LEGACY_USER_EMAIL_FIELD]: email }],
+    _id: { $ne: excludeUserId },
+  });
+  return !!user;
+};
+
+userSchema.statics.isMobileNumberTaken = async function (mobileNumber: string, excludeUserId?: Types.ObjectId) {
+  const user = await this.findOne({
+    $or: [{ phoneNumber: mobileNumber }, { phone: mobileNumber }],
+    _id: { $ne: excludeUserId },
+  });
   return !!user;
 };
 

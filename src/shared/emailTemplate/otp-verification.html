@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en" style="font-family: Arial, sans-serif">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Email Verification</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      .container {
+        max-width: 600px;
+        margin: auto;
+        padding: 24px;
+        background-color: #ffffff;
+        border: 1px solid #e8e8e8;
+        border-radius: 10px;
+      }
+
+      .otp-box {
+        background-color: #fff3ef;
+        border: 1px dashed #dc4a1a;
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        margin: 30px 0;
+      }
+
+      .otp-code {
+        font-size: 32px;
+        font-weight: bold;
+        color: #dc4a1a;
+        letter-spacing: 6px;
+        margin: 12px 0;
+      }
+
+      .footer {
+        text-align: center;
+        font-size: 12px;
+        color: #888888;
+        margin-top: 24px;
+      }
+    </style>
+  </head>
+
+  <body style="background-color: #f5f7fa; padding: 40px 0">
+    <div class="container">
+      <h2 style="color: #dc4a1a">Email Verification</h2>
+
+      <p>Hello {{userName}},</p>
+
+      <p>
+        We received a request to verify your email address. Please use the
+        following One-Time Password (OTP) to complete the verification process:
+      </p>
+
+      <div class="otp-box">
+        <p style="margin: 0">Your verification code is</p>
+        <div class="otp-code">{{otpCode}}</div>
+        <p style="font-size: 12px; color: #666">
+          This code will expire in 10 minutes
+        </p>
+      </div>
+
+      <p>
+        <strong>Important:</strong>
+      </p>
+      <ul>
+        <li>Never share this OTP with anyone</li>
+        <li>This OTP can only be used once</li>
+        <li>If you didn’t request this verification, you can safely ignore this email</li>
+      </ul>
+
+      <p style="margin-top: 30px">
+        Thank you,<br />
+        <strong>The Karuna Care Team</strong>
+      </p>
+    </div>
+
+    <div class="footer">
+      This is an automated message, please do not reply to this email.
+    </div>
+  </body>
+</html>
