@@ -8,7 +8,12 @@ import catchAsync from '@/shared/utils/catchAsync.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import responseCodes from '@/shared/utils/responseCode/responseCode.js';
 
-const RESERVED_QUERY_KEYS = new Set(['page', 'limit', 'search', 'status', 'sortBy']);
+const RESERVED_QUERY_KEYS = new Set(['page', 'limit', 'search', 'status', 'sortBy', 'populate']);
+const DEFAULT_POPULATE = [
+  { path: 'createdBy', select: 'fullName email' },
+  { path: 'updatedBy', select: 'fullName email' },
+] as const;
+type PopulateSpec = { path: string; select?: string };
 
 const toNumber = (value: unknown, fallback: number): number => {
   const parsed = Number(value);
@@ -96,6 +101,42 @@ const buildQuery = (queryInput: Request['query']): Record<string, unknown> => {
   return query;
 };
 
+const parsePopulate = (value: unknown): PopulateSpec[] => {
+  if (typeof value !== 'string') return [];
+
+  return value
+    .split(';')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .reduce<PopulateSpec[]>((acc, entry) => {
+      const [pathPart, selectPart] = entry.split(':');
+      const path = pathPart?.trim();
+      if (!path) return acc;
+
+      const select = selectPart
+        ?.split(',')
+        .map((field) => field.trim())
+        .filter(Boolean)
+        .join(' ');
+
+      acc.push({ path, select });
+      return acc;
+    }, []);
+};
+
+const applyPopulate = <T extends { populate: (path: string, select?: string) => T }>(query: T, populateValue?: unknown) => {
+  const specs = [...DEFAULT_POPULATE, ...parsePopulate(populateValue)];
+  const seen = new Set<string>();
+
+  specs.forEach(({ path, select }) => {
+    if (seen.has(path)) return;
+    seen.add(path);
+    query.populate(path, select);
+  });
+
+  return query;
+};
+
 export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: MasterModuleKey) => {
   const label = toMasterLabel(moduleKey);
 
@@ -107,13 +148,7 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
       const query = buildQuery(req.query);
 
       const [items, total] = await Promise.all([
-        Model.find(query)
-          .sort({ createdAt: -1 })
-          .skip(skip)
-          .limit(limit)
-          .populate('createdBy', 'fullName email')
-          .populate('updatedBy', 'fullName email')
-          .lean(),
+        applyPopulate(Model.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit), req.query.populate).lean(),
         Model.countDocuments(query),
       ]);
 
@@ -130,17 +165,16 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
     }),
 
     getById: catchAsync(async (req: Request, res: Response) => {
-      const item = await Model.findOne({
+      const item = Model.findOne({
         _id: req.params.id,
         deletedAt: null,
-      })
-        .populate('createdBy', 'fullName email')
-        .populate('updatedBy', 'fullName email')
-        .lean();
+      });
 
-      if (!item) throw new ApiError(httpStatus.NOT_FOUND, `${label} not found`);
+      const populatedItem = await applyPopulate(item, req.query.populate).lean();
 
-      res.success(item, responseCodes.LocationResponseCodes.SUCCESS, `${label} fetched successfully`);
+      if (!populatedItem) throw new ApiError(httpStatus.NOT_FOUND, `${label} not found`);
+
+      res.success(populatedItem, responseCodes.LocationResponseCodes.SUCCESS, `${label} fetched successfully`);
     }),
 
     create: catchAsync(async (req: Request, res: Response) => {
@@ -150,10 +184,7 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
       if (!payload.updatedBy && req.user?.id) payload.updatedBy = req.user.id;
 
       const created = await Model.create(payload);
-      const item = await Model.findById(created._id)
-        .populate('createdBy', 'fullName email')
-        .populate('updatedBy', 'fullName email')
-        .lean();
+      const item = await applyPopulate(Model.findById(created._id), req.query.populate).lean();
 
       res
         .status(httpStatus.CREATED)
@@ -168,18 +199,17 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
       if (!Object.keys(payload).length)
         throw new ApiError(httpStatus.BAD_REQUEST, 'At least one updatable field is required');
 
-      const updated = await Model.findOneAndUpdate(
+      const updated = Model.findOneAndUpdate(
         { _id: req.params.id, deletedAt: null },
         { $set: payload },
         { new: true, runValidators: true },
-      )
-        .populate('createdBy', 'fullName email')
-        .populate('updatedBy', 'fullName email')
-        .lean();
+      );
 
-      if (!updated) throw new ApiError(httpStatus.NOT_FOUND, `${label} not found`);
+      const populatedUpdated = await applyPopulate(updated, req.query.populate).lean();
 
-      res.success(updated, responseCodes.LocationResponseCodes.SUCCESS, `${label} updated successfully`);
+      if (!populatedUpdated) throw new ApiError(httpStatus.NOT_FOUND, `${label} not found`);
+
+      res.success(populatedUpdated, responseCodes.LocationResponseCodes.SUCCESS, `${label} updated successfully`);
     }),
 
     remove: catchAsync(async (req: Request, res: Response) => {

@@ -16,6 +16,7 @@ export const mastersValidation = {
         page: Joi.number().integer().min(1),
         limit: Joi.number().integer().min(1).max(100),
         search: Joi.string().allow(''),
+        populate: Joi.string().allow(''),
         status: statusSchema,
       },
       { allowUnknown: true },
