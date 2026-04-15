@@ -25,6 +25,7 @@ export const getUsers = {
     {
       name: Joi.string(),
       search: Joi.string().allow(''),
+      status: statusSchema,
       role: Joi.string(),
       roleId: Joi.string().custom(objectId),
       sortBy: Joi.string(),
@@ -51,7 +52,7 @@ export const updateUser = {
     {
       email: Joi.string().email(),
       password: Joi.string().custom(password),
-      name: Joi.string(),
+      fullName: Joi.string(),
       phoneNumber: Joi.string(),
       dialCode: Joi.number().integer(),
       roleId: Joi.string().custom(objectId),

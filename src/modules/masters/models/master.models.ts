@@ -94,7 +94,12 @@ const transportTypeSchema = createMasterSchema({
 });
 
 const transportSchema = createMasterSchema({
-  type: { type: String, enum: ['bus', 'flight', 'train', 'car'] },
+  typeId: { type: Schema.Types.ObjectId, ref: 'MasterTransportType' },
+  capacity: { type: Number, min: 0 },
+  description: { type: String, trim: true },
+  details: { type: Schema.Types.Mixed, default: {} },
+  // Legacy fields retained for existing records while the UI migrates to typeId/capacity.
+  type: { type: String, trim: true },
   totalSeats: { type: Number, min: 0 },
 });
 

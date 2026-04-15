@@ -3,6 +3,7 @@ import httpStatus from 'http-status';
 import mongoose from 'mongoose';
 
 import User from '@/modules/user/user.model.js';
+import logger from '@/shared/config/logger.js';
 import { sendUserCredentialsEmail } from '@/shared/email/email.service.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
@@ -29,6 +30,23 @@ const normalizeMobileNumber = (mobileNumber?: string | number): string =>
   String(mobileNumber ?? '')
     .replace(/\D+/g, '')
     .trim();
+
+const getEmailErrorMessage = (error: unknown): string => {
+  if (error instanceof Error && error.message.trim()) return error.message.trim();
+  return 'Unknown email error';
+};
+
+const getEmailErrorMeta = (error: unknown) => {
+  if (!error || typeof error !== 'object') return {};
+
+  const candidate = error as Record<string, unknown>;
+  return {
+    errorCode: typeof candidate.code === 'string' || typeof candidate.code === 'number' ? String(candidate.code) : undefined,
+    command: typeof candidate.command === 'string' ? candidate.command : undefined,
+    response: typeof candidate.response === 'string' ? candidate.response : undefined,
+    responseCode: typeof candidate.responseCode === 'number' ? candidate.responseCode : undefined,
+  };
+};
 
 /**
  * Get user by id
@@ -128,10 +146,17 @@ export const createUser = async (userBody: NewCreatedUser): Promise<CreateUserRe
         String(created.fullName || created.firstName || 'User').trim() || 'User',
         plainPassword,
       );
-  } catch {
+  } catch (error) {
     emailSent = false;
-    emailWarning = 'User created but failed to send credentials email';
-    console.warn(emailWarning, { userId: String(created._id), email });
+    const emailErrorMessage = getEmailErrorMessage(error);
+    emailWarning = `User created but failed to send credentials email: ${emailErrorMessage}`;
+    logger.error('User credentials email failed after user creation', {
+      userId: String(created._id),
+      email,
+      emailWarning,
+      ...getEmailErrorMeta(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
   }
   const populated = await getUserById(created._id);
   return {
@@ -308,7 +333,7 @@ export const resendUserCredentialsById = async (userId: mongoose.Types.ObjectId)
       String(user.fullName || user.firstName || 'User').trim() || 'User',
       temporaryPassword,
     );
-  } catch {
+  } catch (error) {
     await User.updateOne(
       { _id: userId },
       {
@@ -318,9 +343,18 @@ export const resendUserCredentialsById = async (userId: mongoose.Types.ObjectId)
         },
       },
     );
+
+    const emailErrorMessage = getEmailErrorMessage(error);
+    logger.error('Failed to resend user credentials email', {
+      userId: String(userId),
+      email: user.email,
+      ...getEmailErrorMeta(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+
     throw new ApiError(
       httpStatus.INTERNAL_SERVER_ERROR,
-      'Failed to resend credentials email',
+      `Failed to resend credentials email: ${emailErrorMessage}`,
       undefined,
       true,
       '',

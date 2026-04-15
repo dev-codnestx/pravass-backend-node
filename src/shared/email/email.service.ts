@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 import handlebars from 'handlebars';
 
 import config from '@/shared/config/config.js';
+import logger from '@/shared/config/logger.js';
 import { Message } from '@/shared/email/email.interfaces.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,8 +41,24 @@ export const transport = nodemailer.createTransport(config.email.smtp);
 if (config.env !== 'test')
   transport
     .verify()
-    .then(() => console.info('Connected to email server'))
-    .catch(() => console.warn('Unable to connect to email server. Make sure you have configured the SMTP options in .env'));
+    .then(() => logger.info('Connected to email server'))
+    .catch((error) =>
+      logger.warn('Unable to connect to email server. Make sure you have configured the SMTP options in .env', {
+        errorMessage: error instanceof Error ? error.message : String(error),
+      }),
+    );
+
+const getEmailTransportErrorMeta = (error: unknown) => {
+  if (!error || typeof error !== 'object') return {};
+
+  const candidate = error as Record<string, unknown>;
+  return {
+    errorCode: typeof candidate.code === 'string' || typeof candidate.code === 'number' ? String(candidate.code) : undefined,
+    command: typeof candidate.command === 'string' ? candidate.command : undefined,
+    response: typeof candidate.response === 'string' ? candidate.response : undefined,
+    responseCode: typeof candidate.responseCode === 'number' ? candidate.responseCode : undefined,
+  };
+};
 
 /**
  * Send an email
@@ -160,9 +177,16 @@ export const sendNodeMailerEmail = async (toEmail: string, subject: string, html
 
   try {
     await transport.sendMail(mailOptions);
-    console.log('Email sent successfully to', toEmail);
+    logger.info('Email sent successfully', { to: toEmail, subject });
   } catch (error) {
-    console.error('Error sending email:', error);
+    logger.error('Failed to send email', {
+      to: toEmail,
+      subject,
+      errorMessage: error instanceof Error ? error.message : 'Unknown email transport error',
+      ...getEmailTransportErrorMeta(error),
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error instanceof Error ? error : new Error('Unknown email transport error');
   }
 };
 
