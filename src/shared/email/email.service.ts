@@ -11,6 +11,29 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dirWithoutDist = __dirname.includes('dist') ? __dirname.replace(/dist/, '') : __dirname;
+const getAdminFrontendOrigin = () => {
+  const rawUrl = String(config.adminClientUrl || '')
+    .trim()
+    .replace(/\/+$/, '');
+  if (!rawUrl) return '';
+
+  try {
+    return new URL(rawUrl).origin;
+  } catch {
+    return `http://${rawUrl}`;
+  }
+};
+
+const buildAdminFrontendUrl = (pathname: string, searchParams?: Record<string, string>) => {
+  const origin = getAdminFrontendOrigin();
+  const url = new URL(pathname, `${origin}/`);
+  if (searchParams)
+    Object.entries(searchParams).forEach(([key, value]) => {
+      if (value) url.searchParams.set(key, value);
+    });
+
+  return url.toString();
+};
 
 export const transport = nodemailer.createTransport(config.email.smtp);
 /* istanbul ignore next */
@@ -47,8 +70,7 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
  */
 export const sendResetPasswordEmail = async (to: string, token: string): Promise<void> => {
   const subject = 'Reset password';
-  // replace this url with the link to the reset password page of your front-end app
-  const resetPasswordUrl = `http://${config.adminClientUrl}/reset-password?token=${token}`;
+  const resetPasswordUrl = buildAdminFrontendUrl('/reset-password', { token });
   const text = `Hi,
   To reset your password, click on this link: ${resetPasswordUrl}
   If you did not request any password resets, then ignore this email.`;
@@ -69,8 +91,7 @@ export const sendResetPasswordEmail = async (to: string, token: string): Promise
  */
 export const sendVerificationMail = async (to: string, token: string, name: string): Promise<void> => {
   const subject = 'Email Verification';
-  // replace this url with the link to the email verification page of your front-end app
-  const verificationEmailUrl = `http://${config.adminClientUrl}/verify-email?token=${token}`;
+  const verificationEmailUrl = buildAdminFrontendUrl('/verify-email', { token });
   const text = `Hi ${name},
   To verify your email, click on this link: ${verificationEmailUrl}
   If you did not create an account, then ignore this email.`;
@@ -89,8 +110,7 @@ export const sendVerificationMail = async (to: string, token: string, name: stri
  */
 export const sendSuccessfulRegistration = async (to: string, token: string, name: string): Promise<void> => {
   const subject = 'Email Verification';
-  // replace this url with the link to the email verification page of your front-end app
-  const verificationEmailUrl = `http://${config.adminClientUrl}/verify-email?token=${token}`;
+  const verificationEmailUrl = buildAdminFrontendUrl('/verify-email', { token });
   const text = `Hi ${name},
   Congratulations! Your account has been created. 
   You are almost there. Complete the final step by verifying your email at: ${verificationEmailUrl}
@@ -114,8 +134,7 @@ export const sendSuccessfulRegistration = async (to: string, token: string, name
  */
 export const sendAccountCreated = async (to: string, name: string): Promise<void> => {
   const subject = 'Account Created Successfully';
-  // replace this url with the link to the email verification page of your front-end app
-  const loginUrl = `${config.adminClientUrl}`;
+  const loginUrl = buildAdminFrontendUrl('/');
   const text = `Hi ${name},
   Congratulations! Your account has been created successfully. 
   You can now login at: ${loginUrl}
@@ -179,7 +198,7 @@ export const sendUserCredentialsEmail = async (to: string, userName: string, pas
     replacements: {
       userName,
       password,
-      loginUrl: `${config.adminClientUrl}`,
+      loginUrl: buildAdminFrontendUrl('/'),
     },
   });
 };
