@@ -1,35 +1,23 @@
 import { RoleModel } from '../modules/roles/role.model.js';
-import { AppAction, AppModule, DEFAULT_ROLE_PERMISSIONS } from '../modules/permissions/permission.constants.js';
+import { DEFAULT_ROLE_PERMISSIONS } from '../modules/permissions/permission.constants.js';
 
 /**
- * Seed default roles with permissions
+ * Seed default roles.
+ *
+ * Permissions are intentionally left empty here so roles can be created as
+ * plain role records and populated separately when needed.
  */
 export const seedRoles = async (): Promise<void> => {
   console.info('🌱 Seeding roles...');
 
-  const roles = Object.entries(DEFAULT_ROLE_PERMISSIONS).map(([code, permissions]) => {
-    // Group permissions by module
-    const permissionMap = new Map<AppModule, AppAction[]>();
-
-    permissions.forEach((permission) => {
-      const [module, action] = permission.split(':') as [AppModule, AppAction];
-      if (!permissionMap.has(module)) permissionMap.set(module, []);
-
-      permissionMap.get(module)!.push(action);
-    });
-
-    return {
-      name: code.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
-      code,
-      description: `${code.replace('_', ' ')} role with predefined permissions`,
-      permissions: Array.from(permissionMap.entries()).map(([module, actions]) => ({
-        module,
-        actions,
-      })),
-      isSystem: true,
-      status: 'active' as const,
-    };
-  });
+  const roles = Object.keys(DEFAULT_ROLE_PERMISSIONS).map((code) => ({
+    name: code.replace('_', ' ').replace(/\b\w/g, (l) => l.toUpperCase()),
+    code,
+    description: `${code.replace('_', ' ')} role`,
+    permissions: [],
+    isSystem: true,
+    status: 'active' as const,
+  }));
 
   const existingRoles = await RoleModel.find({
     code: { $in: roles.map((role) => role.code) },
@@ -49,7 +37,6 @@ export const seedRoles = async (): Promise<void> => {
         { code: roleData.code },
         {
           $set: {
-            permissions: roleData.permissions,
             description: roleData.description,
           },
         },

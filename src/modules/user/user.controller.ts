@@ -32,6 +32,7 @@ export const getUsers = catchAsync(async (req: Request, res: Response) => {
       : typeof req.query.role === 'string'
         ? req.query.role.trim()
         : '';
+  const userType = typeof req.query.userType === 'string' ? req.query.userType.trim().toLowerCase() : '';
 
   if (search)
     filter.$or = [
@@ -42,6 +43,7 @@ export const getUsers = catchAsync(async (req: Request, res: Response) => {
   else if (name) filter.fullName = { $regex: name, $options: 'i' };
 
   if (roleId) filter.roleId = mongoose.Types.ObjectId.isValid(roleId) ? new mongoose.Types.ObjectId(roleId) : roleId;
+  if (userType) filter.userType = userType;
 
   const options: PaginateOptions = pick(req.query, ['sortBy', 'limit', 'page', 'projectBy', 'populate']);
   if (!options.populate) options.populate = 'roleId:name,code,description,permissions,isSystem,status';
