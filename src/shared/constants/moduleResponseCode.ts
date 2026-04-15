@@ -47,6 +47,9 @@ const entitiesAndCustomCodes: EntityDefinition[] = [
     name: 'Otp',
   },
   {
+    name: 'Testimonial',
+  },
+  {
     name: 'Token',
   },
   {
