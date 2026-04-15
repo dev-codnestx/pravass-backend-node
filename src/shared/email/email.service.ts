@@ -12,6 +12,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const dirWithoutDist = __dirname.includes('dist') ? __dirname.replace(/dist/, '') : __dirname;
+const templateSearchRoots = [
+  path.resolve(process.cwd(), 'src/shared/emailTemplate'),
+  path.resolve(process.cwd(), 'dist/shared/emailTemplate'),
+  path.resolve(dirWithoutDist, '../emailTemplate'),
+  path.resolve(__dirname, '../emailTemplate'),
+];
 const getAdminFrontendOrigin = () => {
   const rawUrl = String(config.adminClientUrl || '')
     .trim()
@@ -190,13 +196,86 @@ export const sendNodeMailerEmail = async (toEmail: string, subject: string, html
   }
 };
 
+const fallbackUserCredentialsTemplate = (replacements: Record<string, any>) => `
+  <!DOCTYPE html>
+  <html lang="en" style="font-family: Arial, sans-serif;">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Your Account Credentials</title>
+      <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      <style>
+        a.button {
+          background-color: #dc4a1a;
+          color: white !important;
+          padding: 12px 20px;
+          text-decoration: none;
+          border-radius: 6px;
+          display: inline-block;
+          font-weight: bold;
+        }
+        .container {
+          max-width: 600px;
+          margin: auto;
+          padding: 24px;
+          background-color: #ffffff;
+          border: 1px solid #e8e8e8;
+          border-radius: 10px;
+        }
+        .credential {
+          background: #f8fafc;
+          border: 1px solid #e2e8f0;
+          border-radius: 8px;
+          padding: 12px 16px;
+          font-family: monospace;
+          word-break: break-word;
+        }
+        .footer {
+          text-align: center;
+          font-size: 12px;
+          color: #888888;
+          margin-top: 24px;
+        }
+      </style>
+    </head>
+    <body style="background-color: #f5f7fa; padding: 40px 0;">
+      <div class="container">
+        <h2 style="color: #dc4a1a;">Welcome to Pravass</h2>
+        <p>Hello ${replacements.userName ?? 'User'},</p>
+        <p>Your account has been created by the admin team. You can log in using the password below:</p>
+        <div class="credential">${replacements.password ?? ''}</div>
+        <p style="text-align: center; margin: 30px 0;">
+          <a href="${replacements.loginUrl ?? ''}" class="button">Login Now</a>
+        </p>
+        <p>If the button above doesn't work, copy and paste this link into your browser:</p>
+        <p style="word-break: break-all; color: #555;">${replacements.loginUrl ?? ''}</p>
+        <p style="margin-top: 30px;">Thank you,<br /><strong>The Pravass Team</strong></p>
+      </div>
+      <div class="footer">
+        If you did not expect this email, please contact your administrator.
+      </div>
+    </body>
+  </html>
+`;
+
 export const loadEmailTemplateFromFile = (templateName: string, replacements: any) => {
-  const emailTemplatePath = config.env === 'development' ? '../emailTemplate' : 'src/shared/emailTemplate';
-  const filePath = path.join(dirWithoutDist, emailTemplatePath, `${templateName}.html`);
+  const fileCandidates = templateSearchRoots.map((root) => path.join(root, `${templateName}.html`));
+  const filePath = fileCandidates.find((candidate) => fs.existsSync(candidate));
+
+  if (!filePath) {
+    if (templateName === 'user-credentials') {
+      logger.warn('Email template file missing, using inline fallback template', {
+        templateName,
+        candidates: fileCandidates,
+      });
+      return fallbackUserCredentialsTemplate(replacements);
+    }
+
+    throw new Error(`Email template file not found for template "${templateName}". Checked: ${fileCandidates.join(', ')}`);
+  }
+
   const templateSource = fs.readFileSync(filePath, 'utf-8');
   const template = handlebars.compile(templateSource);
-  const renderedTemplate = template(replacements);
-  return renderedTemplate;
+  return template(replacements);
 };
 
 export async function sendTemplatedEmail({
