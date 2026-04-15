@@ -14,7 +14,6 @@ connectToDatabase().then(() => {
   server = app.listen(config.port, () => {
     logger.info(`Listening to port ${config.port}`);
   });
-});
 
 const exitHandler = () => {
   if (server)
