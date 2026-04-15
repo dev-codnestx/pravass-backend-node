@@ -8,7 +8,7 @@ import ApiError from '@/shared/utils/errors/ApiError.js';
 import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 import responseCodes from '@/shared/utils/responseCode/responseCode.js';
 
-import { IUserDoc, NewCreatedUser, NewRegisteredUser, UpdateUserBody } from './user.interfaces.js';
+import { CreateUserResult, IUserDoc, NewCreatedUser, NewRegisteredUser, UpdateUserBody } from './user.interfaces.js';
 
 const LEGACY_USER_EMAIL_FIELD = 'user_email' as const;
 
@@ -92,7 +92,7 @@ const normalizeUserPayload = (payload: NewCreatedUser | NewRegisteredUser | Upda
  * @param {NewCreatedUser} userBody
  * @returns {Promise<IUserDoc>}
  */
-export const createUser = async (userBody: NewCreatedUser): Promise<IUserDoc> => {
+export const createUser = async (userBody: NewCreatedUser): Promise<CreateUserResult> => {
   const normalizedPayload = normalizeUserPayload(userBody);
   const plainPassword = typeof userBody.password === 'string' ? userBody.password : '';
   const email = typeof normalizedPayload.email === 'string' ? normalizedPayload.email : '';
@@ -119,6 +119,8 @@ export const createUser = async (userBody: NewCreatedUser): Promise<IUserDoc> =>
     );
 
   const created = await User.create(normalizedPayload);
+  let emailSent = true;
+  let emailWarning: string | undefined;
   try {
     if (email && plainPassword)
       await sendUserCredentialsEmail(
@@ -127,18 +129,16 @@ export const createUser = async (userBody: NewCreatedUser): Promise<IUserDoc> =>
         plainPassword,
       );
   } catch {
-    await User.deleteOne({ _id: created._id });
-    throw new ApiError(
-      httpStatus.INTERNAL_SERVER_ERROR,
-      'User created but failed to send credentials email',
-      undefined,
-      true,
-      '',
-      responseCodes.UserResponseCodes.ERROR,
-    );
+    emailSent = false;
+    emailWarning = 'User created but failed to send credentials email';
+    console.warn(emailWarning, { userId: String(created._id), email });
   }
   const populated = await getUserById(created._id);
-  return populated ?? created;
+  return {
+    user: populated ?? created,
+    emailSent,
+    emailWarning,
+  };
 };
 
 /**

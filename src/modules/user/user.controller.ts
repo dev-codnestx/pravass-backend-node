@@ -18,8 +18,17 @@ const assertValidUserId = (userId: unknown) => {
 };
 
 export const createUser = catchAsync(async (req: Request, res: Response) => {
-  const user = await userService.createUser(req.body);
-  res.status(httpStatus.CREATED).success({ user }, responseCodes.UserResponseCodes.SUCCESS, 'User created successfully');
+  const result = await userService.createUser(req.body);
+  const message = result.emailSent
+    ? 'User created successfully'
+    : 'User created successfully, but credentials email failed to send';
+  res
+    .status(httpStatus.CREATED)
+    .success(
+      { user: result.user, emailSent: result.emailSent, emailWarning: result.emailWarning },
+      responseCodes.UserResponseCodes.SUCCESS,
+      message,
+    );
 });
 
 export const getUsers = catchAsync(async (req: Request, res: Response) => {
