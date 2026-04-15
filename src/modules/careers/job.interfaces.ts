@@ -1,10 +1,11 @@
 import { Document, Model, Types } from 'mongoose';
 
-import { jobDepartments, jobStatuses } from '@/shared/constants/enum.constant.js';
+import { employmentTypes, jobDepartments, jobStatuses } from '@/shared/constants/enum.constant.js';
 import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
 export type JobDepartment = (typeof jobDepartments)[number];
 export type JobStatus = (typeof jobStatuses)[number];
+export type EmploymentType = (typeof employmentTypes)[number];
 
 export interface IJob {
   title: string;
@@ -12,6 +13,9 @@ export interface IJob {
   location: string;
   description?: string;
   requirements?: string;
+  experience: string;
+  employmentType: EmploymentType;
+  openings: number;
   status: JobStatus;
   isDeleted: boolean;
   totalApplications: number;

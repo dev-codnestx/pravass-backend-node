@@ -1,6 +1,6 @@
 import Joi from 'joi';
 
-import { jobDepartments, jobStatuses } from '@/shared/constants/enum.constant.js';
+import { employmentTypes, jobDepartments, jobStatuses } from '@/shared/constants/enum.constant.js';
 
 const createJob = {
   body: Joi.object().keys({
@@ -11,6 +11,11 @@ const createJob = {
     location: Joi.string().required().trim().min(2).max(200),
     description: Joi.string().allow('').optional(),
     requirements: Joi.string().allow('').optional(),
+    experience: Joi.string().required().trim(),
+    employmentType: Joi.string()
+      .required()
+      .valid(...employmentTypes),
+    openings: Joi.number().required().integer().min(1),
     status: Joi.string()
       .valid(...jobStatuses)
       .default('Active'),
@@ -48,6 +53,11 @@ const updateJob = {
       location: Joi.string().trim().min(2).max(200).optional(),
       description: Joi.string().allow('').optional(),
       requirements: Joi.string().allow('').optional(),
+      experience: Joi.string().trim().optional(),
+      employmentType: Joi.string()
+        .valid(...employmentTypes)
+        .optional(),
+      openings: Joi.number().integer().min(1).optional(),
       status: Joi.string()
         .valid(...jobStatuses)
         .optional(),

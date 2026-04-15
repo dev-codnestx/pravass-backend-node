@@ -11,6 +11,7 @@ export const faqStatuses = ['Active', 'Inactive'] as const;
 // Career / Job enums
 export const jobDepartments = ['Operations', 'Marketing', 'Sales', 'Engineering', 'HR', 'Finance'] as const;
 export const jobStatuses = ['Active', 'Closed'] as const;
+export const employmentTypes = ['Full time', 'Part time', 'Internship', 'WFH', 'Contract'] as const;
 
 // Application enums
 export const applicationStatuses = ['Under Review', 'Shortlisted', 'Interview', 'Rejected'] as const;
