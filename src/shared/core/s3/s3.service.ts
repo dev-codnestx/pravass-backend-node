@@ -9,7 +9,7 @@ import config from '@/shared/config/config.js';
 
 const bucketName = config.aws.bucketName;
 
-if (!bucketName) throw new Error('AWS bucket name missing');
+// if (!bucketName) throw new Error('AWS bucket name missing');
 
 const s3Client = new S3Client({
   region: config.aws.region,

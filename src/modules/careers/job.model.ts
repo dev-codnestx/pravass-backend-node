@@ -1,6 +1,6 @@
 import { Schema, model } from 'mongoose';
 
-import { jobDepartments, jobStatuses } from '@/shared/constants/enum.constant.js';
+import { employmentTypes, jobDepartments, jobStatuses } from '@/shared/constants/enum.constant.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 
 import { IJobDoc, IJobModel } from './job.interfaces.js';
@@ -17,6 +17,15 @@ const jobSchema = new Schema<IJobDoc, IJobModel>(
     location: { type: String, required: true, trim: true },
     description: { type: String, default: '' },
     requirements: { type: String, default: '' },
+    experience: { type: String, required: true, trim: true, default: 'Not specified' },
+    employmentType: {
+      type: String,
+      enum: employmentTypes,
+      required: true,
+      default: 'Full time',
+      index: true,
+    },
+    openings: { type: Number, required: true, min: 1, default: 1 },
     status: {
       type: String,
       enum: jobStatuses,
