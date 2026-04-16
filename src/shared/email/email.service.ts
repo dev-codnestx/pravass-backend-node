@@ -94,14 +94,42 @@ export const sendEmail = async (to: string, subject: string, text: string, html:
 export const sendResetPasswordEmail = async (to: string, token: string): Promise<void> => {
   const subject = 'Reset password';
   const resetPasswordUrl = buildAdminFrontendUrl('/reset-password', { token });
+
   const text = `Hi,
-  To reset your password, click on this link: ${resetPasswordUrl}
-  If you did not request any password resets, then ignore this email.`;
-  const html = `<div style="margin:30px; padding:30px; border:1px solid black; border-radius: 20px 10px;"><h4><strong>Dear user,</strong></h4>
-  <p>To reset your password, click on this link: ${resetPasswordUrl}</p>
-  <p>If you did not request any password resets, please ignore this email.</p>
-  <p>Thanks,</p>
-  <p><strong>Team</strong></p></div>`;
+To reset your password, click on the button below
+If you did not request any password resets, then ignore this email.`;
+
+  const html = `
+  <div style="margin:30px; padding:30px; border:1px solid #e5e5e5; border-radius: 12px; font-family: Arial, sans-serif;">
+    <h3 style="margin-bottom: 20px;">Dear User,</h3>
+
+    <p style="margin-bottom: 20px;">
+      To reset your password, click the button below:
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${resetPasswordUrl}" 
+         style="
+           background-color: #2563EB;
+           color: #ffffff;
+           padding: 12px 24px;
+           text-decoration: none;
+           border-radius: 6px;
+           display: inline-block;
+           font-weight: bold;
+         ">
+        Reset Password
+      </a>
+    </div>
+
+    <p style="margin-top: 20px;">
+      If you did not request a password reset, you can safely ignore this email.
+    </p>
+
+    <p style="margin-top: 30px;">Thanks,<br/><strong>Team</strong></p>
+  </div>
+  `;
+
   await sendEmail(to, subject, text, html);
 };
 
