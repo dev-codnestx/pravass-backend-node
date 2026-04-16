@@ -38,3 +38,8 @@ export enum ACTIONS_TYPE {
 }
 
 export type ActionsType = (typeof ACTIONS_TYPE)[keyof typeof ACTIONS_TYPE];
+
+export enum TOUR_CATEGORY {
+  DOMESTIC = 'domestic',
+  INTERNATIONAL = 'international',
+}

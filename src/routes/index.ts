@@ -12,6 +12,7 @@ import roleRoute from '@/modules/roles/role.route.js';
 import userRoute from '@/modules/user/user.route.js';
 import s3Route from '@/shared/core/s3/s3.route.js';
 import supportRoute from '@/modules/support/support.route.js';
+import tourRoute from '@/modules/tours/tour.route.js';
 
 const router = express.Router();
 
@@ -69,6 +70,10 @@ const setupRoutes = () => {
     {
       path: '/support',
       route: supportRoute,
+    },
+    {
+      path: '/tours',
+      route: tourRoute,
     },
   ];
 
