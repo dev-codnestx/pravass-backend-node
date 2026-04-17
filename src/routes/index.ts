@@ -10,6 +10,7 @@ import mastersRoute from '@/modules/masters/masters.route.js';
 import permissionRoute from '@/modules/permissions/permission.route.js';
 import roleRoute from '@/modules/roles/role.route.js';
 import userRoute from '@/modules/user/user.route.js';
+import testimonialRoute from '@/modules/testimonial/testimonial.route.js';
 import s3Route from '@/shared/core/s3/s3.route.js';
 import supportRoute from '@/modules/support/support.route.js';
 import tourRoute from '@/modules/tours/tour.route.js';
@@ -42,6 +43,10 @@ const setupRoutes = () => {
     {
       path: '/masters',
       route: mastersRoute,
+    },
+    {
+      path: '/testimonials',
+      route: testimonialRoute,
     },
     {
       path: '/upload',

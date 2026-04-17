@@ -1,655 +1,2764 @@
 {
-	"info": {
-		"_postman_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-		"name": "Travel Platform Auth API",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "travel-platform",
-		"_postman_variable_scope": "environment"
-	},
-	"item": [
-		{
-			"name": "Authentication",
-			"item": [
-				{
-					"name": "Panel Login",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"// Test if login was successful",
-									"if (pm.response.code === 200) {",
-									"    const response = pm.response.json();",
-									"    ",
-									"    // Store tokens in environment variables",
-									"    if (response.data && response.data.tokens) {",
-									"        pm.environment.set('access_token', response.data.tokens.accessToken);",
-									"        pm.environment.set('refresh_token', response.data.tokens.refreshToken);",
-									"        pm.environment.set('user_email', response.data.user.email);",
-									"        pm.environment.set('user_role', response.data.user.role.code);",
-									"        ",
-									"        // Set bearer token for subsequent requests",
-									"        pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.tokens.accessToken);",
-									"    }",
-									"    ",
-									"    pm.test('Login successful', () => {",
-									"        pm.expect(pm.response.code).to.eql(200);",
-									"        pm.expect(response.success).to.be.true;",
-									"        pm.expect(response.data).to.have.property('user');",
-									"        pm.expect(response.data).to.have.property('tokens');",
-									"        pm.expect(response.data.tokens).to.have.property('accessToken');",
-									"        pm.expect(response.data.tokens).to.have.property('refreshToken');",
-									"    });",
-									"} else {",
-									"    pm.test('Login failed with status: ' + pm.response.code, () => {",
-									"        pm.expect(pm.response.code).to.be.oneOf([400, 401, 403]);",
-									"    });",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@pravass.com\",\n  \"password\": \"Admin@123456\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/panel/login",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"panel",
-								"login"
-							]
-						},
-						"description": "Login to admin panel with email and password. Returns access token and refresh token."
-					},
-					"response": []
-				},
-				{
-					"name": "Get Current User",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('Status code is 200', () => {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Response has user data', () => {",
-									"    const response = pm.response.json();",
-									"    pm.expect(response.data).to.have.property('user');",
-									"    pm.expect(response.data.user).to.have.property('email');",
-									"    pm.expect(response.data.user).to.have.property('role');",
-									"    pm.expect(response.data.user).to.have.property('permissions');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{bearer_token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/auth/me",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"me"
-							]
-						},
-						"description": "Get current authenticated user profile with role and permissions."
-					},
-					"response": []
-				},
-				{
-					"name": "Refresh Access Token",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"if (pm.response.code === 200) {",
-									"    const response = pm.response.json();",
-									"    ",
-									"    // Update access token in environment",
-									"    if (response.data && response.data.accessToken) {",
-									"        pm.environment.set('access_token', response.data.accessToken);",
-									"        pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.accessToken);",
-									"    }",
-									"    ",
-									"    pm.test('Token refreshed successfully', () => {",
-									"        pm.expect(pm.response.code).to.eql(200);",
-									"        pm.expect(response.success).to.be.true;",
-									"        pm.expect(response.data).to.have.property('accessToken');",
-									"    });",
-									"} else {",
-									"    pm.test('Token refresh failed', () => {",
-									"        pm.expect(pm.response.code).to.be.oneOf([400, 401]);",
-									"    });",
-									"}"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/refresh",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"refresh"
-							]
-						},
-						"description": "Refresh access token using refresh token. Returns new access token."
-					},
-					"response": []
-				},
-				{
-					"name": "Forgot Password",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('Status code is 200', () => {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('OTP sent message', () => {",
-									"    const response = pm.response.json();",
-									"    pm.expect(response.success).to.be.true;",
-									"    pm.expect(response.message).to.include('sent');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@pravass.com\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/forgot-password",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"forgot-password"
-							]
-						},
-						"description": "Send OTP to email for password reset. Returns success message even if email doesn't exist (security)."
-					},
-					"response": []
-				},
-				{
-					"name": "Reset Password with OTP",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('Status code is 200', () => {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test('Password reset successful', () => {",
-									"    const response = pm.response.json();",
-									"    pm.expect(response.success).to.be.true;",
-									"    pm.expect(response.message).to.include('successful');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"email\": \"admin@pravass.com\",\n  \"otp\": \"123456\",\n  \"newPassword\": \"NewPassword@123\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/reset-password",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"reset-password"
-							]
-						},
-						"description": "Reset password using OTP received via email. Requires email, 6-digit OTP, and new password."
-					},
-					"response": []
-				},
-				{
-					"name": "Logout Current Session",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('Logout successful', () => {",
-									"    pm.response.to.have.status(200);",
-									"    const response = pm.response.json();",
-									"    pm.expect(response.success).to.be.true;",
-									"    ",
-									"    // Clear tokens from environment",
-									"    pm.environment.unset('access_token');",
-									"    pm.environment.unset('refresh_token');",
-									"    pm.environment.unset('user_email');",
-									"    pm.environment.unset('user_role');",
-									"    pm.collectionVariables.unset('bearer_token');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/auth/logout",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"logout"
-							]
-						},
-						"description": "Logout from current session only. Requires refresh token to identify session."
-					},
-					"response": []
-				},
-				{
-					"name": "Logout All Devices",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test('Logout all devices successful', () => {",
-									"    pm.response.to.have.status(200);",
-									"    const response = pm.response.json();",
-									"    pm.expect(response.success).to.be.true;",
-									"    ",
-									"    // Clear tokens from environment",
-									"    pm.environment.unset('access_token');",
-									"    pm.environment.unset('refresh_token');",
-									"    pm.environment.unset('user_email');",
-									"    pm.environment.unset('user_role');",
-									"    pm.collectionVariables.unset('bearer_token');",
-									"});"
-								],
-								"type": "text/javascript"
-							}
-						}
-					],
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{bearer_token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/auth/logout-all",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"auth",
-								"logout-all"
-							]
-						},
-						"description": "Logout from all devices for the current user. Invalidates all refresh tokens."
-					},
-					"response": []
-				}
-			],
-			"description": "Authentication endpoints for admin panel access"
-		},
-		{
-			"name": "User Management",
-			"item": [
-				{
-					"name": "Get All Users",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{bearer_token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/users?page=1&limit=10",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users"
-							],
-							"query": [
-								{
-									"key": "page",
-									"value": "1"
-								},
-								{
-									"key": "limit",
-									"value": "10"
-								}
-							]
-						},
-						"description": "Get paginated list of users. Requires appropriate permissions."
-					},
-					"response": []
-				},
-				{
-					"name": "Create User",
-					"request": {
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{bearer_token}}",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+1234567890\",\n  \"password\": \"Password@123\",\n  \"roleId\": \"{{role_id}}\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/users",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users"
-							]
-						},
-						"description": "Create a new user. Requires manageUsers permission."
-					},
-					"response": []
-				},
-				{
-					"name": "Get User by ID",
-					"request": {
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{bearer_token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/users/{{user_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users",
-								"{{user_id}}"
-							]
-						},
-						"description": "Get specific user by ID. Requires getUsers permission."
-					},
-					"response": []
-				},
-				{
-					"name": "Update User",
-					"request": {
-						"method": "PATCH",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{bearer_token}}",
-								"type": "text"
-							},
-							{
-								"key": "Content-Type",
-								"value": "application/json",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"fullName\": \"John Updated\",\n  \"phone\": \"+1234567891\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{base_url}}/users/{{user_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users",
-								"{{user_id}}"
-							]
-						},
-						"description": "Update user details. Requires manageUsers permission."
-					},
-					"response": []
-				},
-				{
-					"name": "Delete User",
-					"request": {
-						"method": "DELETE",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "{{bearer_token}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{base_url}}/users/{{user_id}}",
-							"host": [
-								"{{base_url}}"
-							],
-							"path": [
-								"users",
-								"{{user_id}}"
-							]
-						},
-						"description": "Delete a user. Requires manageUsers permission."
-					},
-					"response": []
-				}
-			],
-			"description": "User management endpoints with role-based permissions"
-		}
-	],
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					"// Auto-refresh token if it's about to expire",
-					"if (pm.environment.get('access_token') && pm.environment.get('refresh_token')) {",
-					"    const token = pm.environment.get('access_token');",
-					"    try {",
-					"        const payload = JSON.parse(atob(token.split('.')[1]));",
-					"        const expirationTime = payload.exp * 1000;",
-					"        const currentTime = Date.now();",
-					"        ",
-					"        // Refresh if token expires within 5 minutes",
-					"        if (expirationTime - currentTime < 300000) {",
-					"            pm.sendRequest({",
-					"                url: pm.environment.get('base_url') + '/auth/refresh',",
-					"                method: 'POST',",
-					"                header: {",
-					"    'Content-Type': 'application/json'",
-					"},",
-					"body: {",
-					"    mode: 'raw',",
-					"    raw: JSON.stringify({",
-					"        refreshToken: pm.environment.get('refresh_token')",
-					"    })",
-					"}",
-					"}, function (err, res) {",
-					"    if (res && res.code === 200) {",
-					"        const response = res.json();",
-					"        pm.environment.set('access_token', response.data.accessToken);",
-					"        pm.collectionVariables.set('bearer_token', 'Bearer ' + response.data.accessToken);",
-					"    }",
-					"});",
-					"}",
-					"} catch (e) {",
-					"    console.log('Token refresh check failed');",
-					"}",
-					"}"
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"exec": [
-					"// Log response for debugging",
-					"console.log('Response Status:', pm.response.code);",
-					"console.log('Response Time:', pm.response.responseTime);",
-					"if (pm.response.code >= 400) {",
-					"    console.log('Error Response:', pm.response.json());",
-					"}"
-				]
-			}
-		}
-	],
-	"variable": [
-		{
-			"key": "base_url",
-			"value": "http://localhost:3000",
-			"type": "string"
-		},
-		{
-			"key": "bearer_token",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "user_id",
-			"value": "",
-			"type": "string"
-		},
-		{
-			"key": "role_id",
-			"value": "",
-			"type": "string"
-		}
-	]
+  "info": {
+    "_postman_id": "f3a5cbf1-9bd3-4f11-a7db-9e95f4d7aa21",
+    "name": "Pravass Backend API (v1)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "pravass-backend-node"
+  },
+  "item": [
+    {
+      "name": "System",
+      "item": [
+        {
+          "name": "Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": []
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "health"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/register",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "register"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"new.user@example.com\",\n  \"password\": \"Password@123\",\n  \"name\": \"New User\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const data = response?.data || {};",
+                  "const tokens = data?.tokens || data;",
+                  "const accessToken = tokens?.access?.token || tokens?.accessToken || null;",
+                  "const refreshToken = tokens?.refresh?.token || tokens?.refreshToken || null;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('access_token', accessToken);",
+                  "  pm.environment.set('bearer_token', `Bearer ${accessToken}`);",
+                  "}",
+                  "if (refreshToken) {",
+                  "  pm.environment.set('refresh_token', refreshToken);",
+                  "}",
+                  "if (data?.user?.id) pm.environment.set('user_id', data.user.id);",
+                  "if (data?.user?._id) pm.environment.set('user_id', data.user._id);",
+                  "if (data?.user?.email) pm.environment.set('user_email', data.user.email);",
+                  "if (data?.user?.role?.code) pm.environment.set('user_role', data.user.role.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@pravass.com\",\n  \"password\": \"Admin@123456\",\n  \"remember\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const data = response?.data || {};",
+                  "const tokens = data?.tokens || data;",
+                  "const accessToken = tokens?.access?.token || tokens?.accessToken || null;",
+                  "const refreshToken = tokens?.refresh?.token || tokens?.refreshToken || null;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('access_token', accessToken);",
+                  "  pm.environment.set('bearer_token', `Bearer ${accessToken}`);",
+                  "}",
+                  "if (refreshToken) {",
+                  "  pm.environment.set('refresh_token', refreshToken);",
+                  "}",
+                  "if (data?.user?.id) pm.environment.set('user_id', data.user.id);",
+                  "if (data?.user?._id) pm.environment.set('user_id', data.user._id);",
+                  "if (data?.user?.email) pm.environment.set('user_email', data.user.email);",
+                  "if (data?.user?.role?.code) pm.environment.set('user_role', data.user.role.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Panel Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/panel/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "panel",
+                "login"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@pravass.com\",\n  \"password\": \"Admin@123456\",\n  \"remember\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const data = response?.data || {};",
+                  "const tokens = data?.tokens || data;",
+                  "const accessToken = tokens?.access?.token || tokens?.accessToken || null;",
+                  "const refreshToken = tokens?.refresh?.token || tokens?.refreshToken || null;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('access_token', accessToken);",
+                  "  pm.environment.set('bearer_token', `Bearer ${accessToken}`);",
+                  "}",
+                  "if (refreshToken) {",
+                  "  pm.environment.set('refresh_token', refreshToken);",
+                  "}",
+                  "if (data?.user?.id) pm.environment.set('user_id', data.user.id);",
+                  "if (data?.user?._id) pm.environment.set('user_id', data.user._id);",
+                  "if (data?.user?.email) pm.environment.set('user_email', data.user.email);",
+                  "if (data?.user?.role?.code) pm.environment.set('user_role', data.user.role.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Get Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "me"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Tokens",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/refresh-tokens",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh-tokens"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const data = response?.data || {};",
+                  "const tokens = data?.tokens || data;",
+                  "const accessToken = tokens?.access?.token || tokens?.accessToken || null;",
+                  "const refreshToken = tokens?.refresh?.token || tokens?.refreshToken || null;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('access_token', accessToken);",
+                  "  pm.environment.set('bearer_token', `Bearer ${accessToken}`);",
+                  "}",
+                  "if (refreshToken) {",
+                  "  pm.environment.set('refresh_token', refreshToken);",
+                  "}",
+                  "if (data?.user?.id) pm.environment.set('user_id', data.user.id);",
+                  "if (data?.user?._id) pm.environment.set('user_id', data.user._id);",
+                  "if (data?.user?.email) pm.environment.set('user_email', data.user.email);",
+                  "if (data?.user?.role?.code) pm.environment.set('user_role', data.user.role.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Refresh (Alias)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const data = response?.data || {};",
+                  "const tokens = data?.tokens || data;",
+                  "const accessToken = tokens?.access?.token || tokens?.accessToken || null;",
+                  "const refreshToken = tokens?.refresh?.token || tokens?.refreshToken || null;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('access_token', accessToken);",
+                  "  pm.environment.set('bearer_token', `Bearer ${accessToken}`);",
+                  "}",
+                  "if (refreshToken) {",
+                  "  pm.environment.set('refresh_token', refreshToken);",
+                  "}",
+                  "if (data?.user?.id) pm.environment.set('user_id', data.user.id);",
+                  "if (data?.user?._id) pm.environment.set('user_id', data.user._id);",
+                  "if (data?.user?.email) pm.environment.set('user_email', data.user.email);",
+                  "if (data?.user?.role?.code) pm.environment.set('user_role', data.user.role.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.environment.unset('access_token');",
+                  "pm.environment.unset('refresh_token');",
+                  "pm.environment.unset('bearer_token');"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/forgot-password",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@pravass.com\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/reset-password?token={{reset_token}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "reset-password"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{reset_token}}"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"NewPassword@123\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Send Verification Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/send-verification-email",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "send-verification-email"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/verify-email?token={{verify_token}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "verify-email"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "{{verify_token}}"
+                }
+              ]
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const data = response?.data || {};",
+                  "const tokens = data?.tokens || data;",
+                  "const accessToken = tokens?.access?.token || tokens?.accessToken || null;",
+                  "const refreshToken = tokens?.refresh?.token || tokens?.refreshToken || null;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('access_token', accessToken);",
+                  "  pm.environment.set('bearer_token', `Bearer ${accessToken}`);",
+                  "}",
+                  "if (refreshToken) {",
+                  "  pm.environment.set('refresh_token', refreshToken);",
+                  "}",
+                  "if (data?.user?.id) pm.environment.set('user_id', data.user.id);",
+                  "if (data?.user?._id) pm.environment.set('user_id', data.user._id);",
+                  "if (data?.user?.email) pm.environment.set('user_email', data.user.email);",
+                  "if (data?.user?.role?.code) pm.environment.set('user_role', data.user.role.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Generate User OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/user/generate-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "user",
+                "generate-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{phone_number}}\",\n  \"dialCode\": 91\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resend User OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/user/resend-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "user",
+                "resend-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"{{otp_order_id}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Verify User OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/user/verify-otp",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "user",
+                "verify-otp"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{phone_number}}\",\n  \"otp\": \"1234\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const data = response?.data || {};",
+                  "const tokens = data?.tokens || data;",
+                  "const accessToken = tokens?.access?.token || tokens?.accessToken || null;",
+                  "const refreshToken = tokens?.refresh?.token || tokens?.refreshToken || null;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('access_token', accessToken);",
+                  "  pm.environment.set('bearer_token', `Bearer ${accessToken}`);",
+                  "}",
+                  "if (refreshToken) {",
+                  "  pm.environment.set('refresh_token', refreshToken);",
+                  "}",
+                  "if (data?.user?.id) pm.environment.set('user_id', data.user.id);",
+                  "if (data?.user?._id) pm.environment.set('user_id', data.user._id);",
+                  "if (data?.user?.email) pm.environment.set('user_email', data.user.email);",
+                  "if (data?.user?.role?.code) pm.environment.set('user_role', data.user.role.code);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create Account (OTP Flow)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-client-type",
+                "value": "website",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/user/create-account",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "auth",
+                "user",
+                "create-account"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"phoneNumber\": \"{{phone_number}}\",\n  \"dialCode\": 91,\n  \"email\": \"otp.user@example.com\",\n  \"firstName\": \"OTP\",\n  \"lastName\": \"User\",\n  \"birthdate\": \"1998-01-10\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": [],
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const response = pm.response.json();",
+                  "const data = response?.data || {};",
+                  "const tokens = data?.tokens || data;",
+                  "const accessToken = tokens?.access?.token || tokens?.accessToken || null;",
+                  "const refreshToken = tokens?.refresh?.token || tokens?.refreshToken || null;",
+                  "if (accessToken) {",
+                  "  pm.environment.set('access_token', accessToken);",
+                  "  pm.environment.set('bearer_token', `Bearer ${accessToken}`);",
+                  "}",
+                  "if (refreshToken) {",
+                  "  pm.environment.set('refresh_token', refreshToken);",
+                  "}",
+                  "if (data?.user?.id) pm.environment.set('user_id', data.user.id);",
+                  "if (data?.user?._id) pm.environment.set('user_id', data.user._id);",
+                  "if (data?.user?.email) pm.environment.set('user_email', data.user.email);",
+                  "if (data?.user?.role?.code) pm.environment.set('user_role', data.user.role.code);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"staff@example.com\",\n  \"password\": \"Password@123\",\n  \"fullName\": \"Staff User\",\n  \"phoneNumber\": 9876543210,\n  \"dialCode\": 91,\n  \"roleId\": \"{{role_id}}\",\n  \"status\": \"active\",\n  \"profileImage\": \"\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"Staff User Updated\",\n  \"status\": \"inactive\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Resend Credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/{{user_id}}/resend-credentials",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "users",
+                "{{user_id}}",
+                "resend-credentials"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Roles",
+      "item": [
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Operations Manager\",\n  \"code\": \"operations_manager\",\n  \"description\": \"Operations role\",\n  \"status\": \"active\",\n  \"permissions\": [\n    {\n      \"module\": \"users\",\n      \"actions\": [\n        \"view\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Role",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles/{{role_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles",
+                "{{role_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles/{{role_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles",
+                "{{role_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Updated role description\",\n  \"status\": \"inactive\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles/{{role_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles",
+                "{{role_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role Permissions",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/roles/{{role_id}}/permissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "roles",
+                "{{role_id}}",
+                "permissions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    {\n      \"module\": \"users\",\n      \"actions\": [\n        \"view\",\n        \"create\",\n        \"update\"\n      ]\n    },\n    {\n      \"module\": \"blogs\",\n      \"actions\": [\n        \"view\",\n        \"create\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Permissions",
+      "item": [
+        {
+          "name": "List Permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/permissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "permissions"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Permission Catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/permissions/catalog",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "permissions",
+                "catalog"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Role Permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/permissions/{{role_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "permissions",
+                "{{role_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role Permissions (By Role)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/permissions/{{role_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "permissions",
+                "{{role_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    {\n      \"module\": \"users\",\n      \"actions\": [\n        \"view\",\n        \"create\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Role Permissions (Alias)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/permissions/{{role_id}}/permissions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "permissions",
+                "{{role_id}}",
+                "permissions"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    {\n      \"module\": \"users\",\n      \"actions\": [\n        \"view\",\n        \"create\"\n      ]\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Masters",
+      "description": "Set {{master_module}} to one of: locations, destinations, departure-cities, hotels, room-types, aviation, tags, inclusions-exclusions, payment-plans, refund-policies, lead-sources, transport-types, transports, vehicles, sharing-types, tour-types, activities",
+      "item": [
+        {
+          "name": "List Master Items",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/masters/{{master_module}}?page=1&limit=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "masters",
+                "{{master_module}}"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "20"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Master Item",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/masters/{{master_module}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "masters",
+                "{{master_module}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample Master\",\n  \"status\": \"active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Master Item",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/masters/{{master_module}}/{{master_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "masters",
+                "{{master_module}}",
+                "{{master_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Master Item",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/masters/{{master_module}}/{{master_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "masters",
+                "{{master_module}}",
+                "{{master_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sample Master Updated\",\n  \"status\": \"inactive\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Master Item",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/masters/{{master_module}}/{{master_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "masters",
+                "{{master_module}}",
+                "{{master_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Blogs",
+      "item": [
+        {
+          "name": "List Blogs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/blogs?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Blog",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/blogs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"featuredImage\": \"\",\n  \"title\": \"Top 10 Hill Stations\",\n  \"category\": \"Travel Tips\",\n  \"author\": \"Pravass Team\",\n  \"content\": \"Sample blog content\",\n  \"status\": \"Draft\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Blog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/blogs/{{blog_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blog_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Blog",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/blogs/{{blog_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blog_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Blog Title\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Blog Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/blogs/{{blog_id}}/toggle-status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blog_id}}",
+                "toggle-status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Blog",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/blogs/{{blog_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "blogs",
+                "{{blog_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "FAQs",
+      "item": [
+        {
+          "name": "List FAQs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faqs?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faqs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create FAQ",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faqs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faqs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"question\": \"How do I cancel a booking?\",\n  \"answer\": \"You can cancel from your booking page.\",\n  \"category\": \"Booking\",\n  \"status\": \"Active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get FAQ",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faqs/{{faq_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faqs",
+                "{{faq_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update FAQ",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faqs/{{faq_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faqs",
+                "{{faq_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"answer\": \"Updated answer text\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle FAQ Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faqs/{{faq_id}}/toggle-status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faqs",
+                "{{faq_id}}",
+                "toggle-status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete FAQ",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/faqs/{{faq_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "faqs",
+                "{{faq_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Testimonials",
+      "item": [
+        {
+          "name": "List Testimonials",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/testimonials?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "testimonials"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Testimonial",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/testimonials",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "testimonials"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"customerName\": \"Amit Sharma\",\n  \"customerPhoto\": \"\",\n  \"tour\": \"Kerala Delight\",\n  \"rating\": 5,\n  \"testimonial\": \"Excellent experience!\",\n  \"isFeatured\": true,\n  \"status\": \"Active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Testimonial",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/testimonials/{{testimonial_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "testimonials",
+                "{{testimonial_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Testimonial",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/testimonials/{{testimonial_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "testimonials",
+                "{{testimonial_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"testimonial\": \"Updated testimonial text\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Testimonial",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/testimonials/{{testimonial_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "testimonials",
+                "{{testimonial_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Banners",
+      "item": [
+        {
+          "name": "List Banners",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/banners?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "banners"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Banner",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/banners",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "banners"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Summer Offer\",\n  \"subtitle\": \"Limited Time\",\n  \"placement\": \"homepage-hero\",\n  \"priority\": 1,\n  \"status\": \"active\",\n  \"ctaText\": \"Book Now\",\n  \"ctaLink\": \"https://example.com/offers\",\n  \"image\": \"https://example.com/banner.jpg\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Banner",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/banners/{{banner_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "banners",
+                "{{banner_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Banner",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/banners/{{banner_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "banners",
+                "{{banner_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Updated Banner\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Banner",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/banners/{{banner_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "banners",
+                "{{banner_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Jobs",
+      "item": [
+        {
+          "name": "List Jobs",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/jobs?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Job",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jobs",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Travel Consultant\",\n  \"department\": \"Sales\",\n  \"location\": \"Mumbai\",\n  \"description\": \"Role description\",\n  \"requirements\": \"2+ years in travel industry\",\n  \"experience\": \"2-4 years\",\n  \"employmentType\": \"Full time\",\n  \"openings\": 2,\n  \"status\": \"Active\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Job",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Job",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"location\": \"Pune\",\n  \"openings\": 3\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Toggle Job Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}/toggle-status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}",
+                "toggle-status"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Job",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/jobs/{{job_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "jobs",
+                "{{job_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Applications",
+      "item": [
+        {
+          "name": "List Applications",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/applications?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "applications"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Submit Application (Public)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/applications/public/submit",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "applications",
+                "public",
+                "submit"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Candidate Name\",\n  \"email\": \"candidate@example.com\",\n  \"phone\": \"+919999999999\",\n  \"experience\": \"3 years\",\n  \"appliedJob\": \"{{job_id}}\",\n  \"coverLetter\": \"I am interested in this role.\",\n  \"resume\": \"https://example.com/resume.pdf\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Application",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/applications/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "applications",
+                "{{application_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Application Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/applications/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "applications",
+                "{{application_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"Shortlisted\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Application",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/applications/{{application_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "applications",
+                "{{application_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Support Tickets",
+      "item": [
+        {
+          "name": "List Tickets",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/support?page=1&limit=10",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "support"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Ticket",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/support",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "support"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"subject\": \"Need help with booking\",\n  \"category\": \"booking\",\n  \"customer\": \"{{user_id}}\",\n  \"customerName\": \"Customer Name\",\n  \"priority\": \"medium\",\n  \"status\": \"open\",\n  \"message\": \"Please help with my booking.\",\n  \"attachments\": []\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Ticket",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/support/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "support",
+                "{{ticket_id}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update Ticket",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/support/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "support",
+                "{{ticket_id}}"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"in_progress\",\n  \"priority\": \"high\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Ticket Reply",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/support/{{ticket_id}}/reply",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "support",
+                "{{ticket_id}}",
+                "reply"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"from\": \"admin\",\n  \"message\": \"We are checking this.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Add Internal Note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/support/{{ticket_id}}/notes",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "support",
+                "{{ticket_id}}",
+                "notes"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"note\": \"Internal follow-up note\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Ticket",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/support/{{ticket_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "support",
+                "{{ticket_id}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Upload (S3)",
+      "item": [
+        {
+          "name": "Generate Presigned URL",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "{{bearer_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/upload",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "upload"
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"schema\": \"{{s3_folder}}\",\n  \"fileName\": \"{{s3_file_name}}\",\n  \"contentType\": \"{{s3_content_type}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "variable": [
+    {
+      "key": "bearer_token",
+      "value": ""
+    }
+  ]
 }

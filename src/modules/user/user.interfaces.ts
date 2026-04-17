@@ -102,3 +102,9 @@ export interface IUserWithTokens {
   user: IUserDoc;
   tokens: AccessAndRefreshTokens;
 }
+
+export interface CreateUserResult {
+  user: IUserDoc;
+  emailSent: boolean;
+  emailWarning?: string;
+}

@@ -41,11 +41,16 @@ const locationSchema = createMasterSchema({
 
 const destinationSchema = createMasterSchema({
   description: { type: String, trim: true },
+  image: { type: String, trim: true },
 });
 
 const departureCitySchema = createMasterSchema({
+  countryId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  stateId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  cityId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
   country: { type: String, trim: true },
   state: { type: String, trim: true },
+  city: { type: String, trim: true },
 });
 
 const hotelSchema = createMasterSchema({
@@ -94,7 +99,12 @@ const transportTypeSchema = createMasterSchema({
 });
 
 const transportSchema = createMasterSchema({
-  type: { type: String, enum: ['bus', 'flight', 'train', 'car'] },
+  typeId: { type: Schema.Types.ObjectId, ref: 'MasterTransportType' },
+  capacity: { type: Number, min: 0 },
+  description: { type: String, trim: true },
+  details: { type: Schema.Types.Mixed, default: {} },
+  // Legacy fields retained for existing records while the UI migrates to typeId/capacity.
+  type: { type: String, trim: true },
   totalSeats: { type: Number, min: 0 },
 });
 
@@ -120,6 +130,7 @@ const tourTypeSchema = createMasterSchema({
 const activitySchema = createMasterSchema({
   destinationId: { type: Schema.Types.ObjectId, ref: 'MasterDestination' },
   description: { type: String, trim: true },
+  image: { type: String, trim: true },
 });
 
 export const masterModels: Record<MasterModuleKey, Model<IMasterDoc>> = {

@@ -17,9 +17,25 @@ const assertValidUserId = (userId: unknown) => {
   return new mongoose.Types.ObjectId(userId);
 };
 
+const normalizeStatusQuery = (value: unknown) => {
+  if (typeof value !== 'string') return '';
+
+  const normalized = value.trim().toLowerCase();
+  return ['active', 'inactive', 'locked'].includes(normalized) ? normalized : '';
+};
+
 export const createUser = catchAsync(async (req: Request, res: Response) => {
-  const user = await userService.createUser(req.body);
-  res.status(httpStatus.CREATED).success({ user }, responseCodes.UserResponseCodes.SUCCESS, 'User created successfully');
+  const result = await userService.createUser(req.body);
+  const message = result.emailSent
+    ? 'User created successfully'
+    : 'User created successfully, but credentials email failed to send';
+  res
+    .status(httpStatus.CREATED)
+    .success(
+      { user: result.user, emailSent: result.emailSent, emailWarning: result.emailWarning },
+      responseCodes.UserResponseCodes.SUCCESS,
+      message,
+    );
 });
 
 export const getUsers = catchAsync(async (req: Request, res: Response) => {
@@ -33,6 +49,7 @@ export const getUsers = catchAsync(async (req: Request, res: Response) => {
         ? req.query.role.trim()
         : '';
   const userType = typeof req.query.userType === 'string' ? req.query.userType.trim().toLowerCase() : '';
+  const status = normalizeStatusQuery(req.query.status);
 
   if (search)
     filter.$or = [
@@ -44,6 +61,7 @@ export const getUsers = catchAsync(async (req: Request, res: Response) => {
 
   if (roleId) filter.roleId = mongoose.Types.ObjectId.isValid(roleId) ? new mongoose.Types.ObjectId(roleId) : roleId;
   if (userType) filter.userType = userType;
+  if (status) filter.status = status;
 
   const options: PaginateOptions = pick(req.query, ['sortBy', 'limit', 'page', 'projectBy', 'populate']);
   if (!options.populate) options.populate = 'roleId:name,code,description,permissions,isSystem,status';
