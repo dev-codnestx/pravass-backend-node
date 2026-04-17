@@ -2,6 +2,7 @@ export const APP_MODULES = [
   'dashboard',
   'masters',
   'tours',
+  'speciality-tours',
   'deals',
   'blogs',
   'crm',
@@ -56,7 +57,16 @@ export const DEFAULT_ROLE_PERMISSIONS: Record<string, PermissionKey[]> = {
     },
     ['read', 'update', 'publish'],
   ),
-  SALES_EXEC: ['tours:read', 'tours:create', 'customers:read', 'customers:create', 'crm:read', 'crm:update'],
+  SALES_EXEC: [
+    'tours:read',
+    'tours:create',
+    'speciality-tours:read',
+    'speciality-tours:create',
+    'customers:read',
+    'customers:create',
+    'crm:read',
+    'crm:update',
+  ],
   VIEWER: buildPermissionsForRole(
     APP_MODULES,
     {
