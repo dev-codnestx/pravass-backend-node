@@ -55,7 +55,7 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     status: {
       type: String,
       enum: tourStatuses,
-      default: 'Draft',
+      default: 'draft',
       index: true,
     },
     tourType: { type: String, required: true, trim: true },

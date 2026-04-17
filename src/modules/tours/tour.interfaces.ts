@@ -2,7 +2,7 @@ import { Document, Model, Types } from 'mongoose';
 
 import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
-export const tourStatuses = ['Active', 'Draft', 'Archived'] as const;
+export const tourStatuses = ['active', 'draft', 'archived'] as const;
 export const tourDifficulties = ['Easy', 'Moderate', 'Challenging'] as const;
 export const batchStatuses = ['Active', 'Inactive'] as const;
 

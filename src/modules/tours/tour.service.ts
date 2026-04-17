@@ -25,7 +25,7 @@ const deleteTourById = async (tourId: string): Promise<ITourDoc | null> => {
   const tour = await getTourById(tourId);
   if (!tour) throw new ApiError(httpStatus.NOT_FOUND, 'Tour not found');
   tour.isDeleted = true;
-  tour.status = 'Archived';
+  tour.status = 'archived';
   await tour.save();
   return tour;
 };
