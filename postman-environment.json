@@ -1,65 +1,155 @@
 {
-	"id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-	"name": "Travel Platform - Development",
-	"values": [
-		{
-			"key": "base_url",
-			"value": "http://localhost:3000",
-			"type": "default",
-			"enabled": true,
-			"description": "Base URL for the API server"
-		},
-		{
-			"key": "access_token",
-			"value": "",
-			"type": "secret",
-			"enabled": true,
-			"description": "JWT access token for authenticated requests"
-		},
-		{
-			"key": "refresh_token",
-			"value": "",
-			"type": "secret",
-			"enabled": true,
-			"description": "Refresh token for obtaining new access tokens"
-		},
-		{
-			"key": "bearer_token",
-			"value": "",
-			"type": "secret",
-			"enabled": true,
-			"description": "Bearer token in Authorization header format"
-		},
-		{
-			"key": "user_email",
-			"value": "",
-			"type": "default",
-			"enabled": true,
-			"description": "Current authenticated user email"
-		},
-		{
-			"key": "user_role",
-			"value": "",
-			"type": "default",
-			"enabled": true,
-			"description": "Current authenticated user role"
-		},
-		{
-			"key": "user_id",
-			"value": "",
-			"type": "default",
-			"enabled": true,
-			"description": "User ID for user management operations"
-		},
-		{
-			"key": "role_id",
-			"value": "",
-			"type": "default",
-			"enabled": true,
-			"description": "Role ID for user creation"
-		}
-	],
-	"_postman_variable_scope": "environment",
-	"_postman_exported_at": "2026-03-13T11:00:00.000Z",
-	"_postman_exported_using": "Postman/10.0.0"
+  "id": "f3a5cbf1-9bd3-4f11-a7db-9e95f4d7aa22",
+  "name": "Pravass Backend - Development",
+  "values": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000/api/v1",
+      "type": "default",
+      "enabled": true,
+      "description": "API base URL including /api/v1 prefix"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true
+    },
+    {
+      "key": "bearer_token",
+      "value": "",
+      "type": "secret",
+      "enabled": true,
+      "description": "Format: Bearer <access_token>"
+    },
+    {
+      "key": "user_email",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "user_role",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "role_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "blog_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "faq_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "testimonial_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "banner_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "job_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "application_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "ticket_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "master_module",
+      "value": "locations",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "master_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "phone_number",
+      "value": "9999999999",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "otp_order_id",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "reset_token",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "verify_token",
+      "value": "",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "s3_folder",
+      "value": "blogs",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "s3_file_name",
+      "value": "sample.jpg",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "s3_content_type",
+      "value": "image/jpeg",
+      "type": "default",
+      "enabled": true
+    }
+  ],
+  "_postman_variable_scope": "environment",
+  "_postman_exported_at": "2026-04-17T05:14:37.595Z",
+  "_postman_exported_using": "Codex"
 }
