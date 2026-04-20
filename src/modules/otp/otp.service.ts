@@ -1,5 +1,5 @@
 import { v4 as uuidv4 } from 'uuid';
-import { generateSixDigitRandomNumber } from '@/shared/utils/commonHelper.js';
+import { generateFourDigitRandomNumber } from '@/shared/utils/commonHelper.js';
 import { Otp } from './otp.model.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { defaultStatus } from '@/shared/utils/responseCode/httpStatusAlias.js';
@@ -36,7 +36,7 @@ export const sendOtp = async (phone?: number | string, dialCode?: number, email?
     );
 
   const orderId = uuidv4();
-  const otpCode = generateSixDigitRandomNumber();
+  const otpCode = generateFourDigitRandomNumber();
 
   try {
     if (phone) {
