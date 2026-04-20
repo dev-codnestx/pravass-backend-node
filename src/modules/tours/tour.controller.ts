@@ -12,7 +12,7 @@ const createTour = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getTours = catchAsync(async (req: Request, res: Response) => {
-  const filter = pick(req.query, ['name', 'destination', 'status', 'tourType', 'difficulty']);
+  const filter = pick(req.query, ['name', 'destination', 'status', 'tourType', 'tourCategory', 'difficulty', 'code']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate', 'fields', 'includeTimeStamps']);
 
   if (req.query.search) {

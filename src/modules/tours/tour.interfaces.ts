@@ -5,10 +5,12 @@ import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 export const tourStatuses = ['active', 'draft', 'archived'] as const;
 export const tourDifficulties = ['Easy', 'Moderate', 'Challenging'] as const;
 export const batchStatuses = ['Active', 'Inactive'] as const;
+export const tourMediaTypes = ['image', 'video', 'document'] as const;
 
 export type TourStatus = (typeof tourStatuses)[number];
 export type TourDifficulty = (typeof tourDifficulties)[number];
 export type BatchStatus = (typeof batchStatuses)[number];
+export type TourMediaType = (typeof tourMediaTypes)[number];
 
 export interface ITourBatch {
   id?: string;
@@ -29,15 +31,45 @@ export interface ITourFaq {
 
 export interface IItineraryDay {
   day?: number;
+  dayNumber?: number;
   title?: string;
   description?: string;
+  hotelId?: Types.ObjectId;
   hotel?: string;
+  roomTypeId?: Types.ObjectId;
+  roomType?: string;
+  activityIds?: Types.ObjectId[];
+  transfers?: Array<{
+    fromDestinationId?: Types.ObjectId;
+    toDestinationId?: Types.ObjectId;
+    transportTypeId?: Types.ObjectId;
+    transportMode?: string;
+  }>;
+}
+
+export interface ITourMedia {
+  url: string;
+  type: TourMediaType;
+  alt_text?: string;
+  title?: string;
+  text?: string;
+}
+
+export interface ITourPolicies {
+  payment?: string[];
+  cancellation?: string[];
+  termsAndConditions?: string[];
+}
+
+export interface ITourSettings {
+  internalNotes?: string;
 }
 
 export interface ITour {
   name: string;
   code?: string;
-  destinationIds: Types.ObjectId[];
+  destination?: string;
+  destinationIds?: Types.ObjectId[];
   continentId?: Types.ObjectId;
   duration: string;
   durationDays?: number;
@@ -64,6 +96,7 @@ export interface ITour {
   inclusions?: string;
   exclusions?: string;
   gallery?: string[];
+  media?: ITourMedia[];
   vehicleId?: string;
   videoType?: 'url' | 'file';
   videoFile?: string;
@@ -77,10 +110,15 @@ export interface ITour {
   updatedAt?: Date;
   inclusionIds?: Types.ObjectId[];
   exclusionIds?: Types.ObjectId[];
+  activityIds?: string[];
   tourCategory?: string;
   paymentPlan?: string;
   refundPolicy?: string;
+  paymentPolicy?: string;
+  cancellationPolicy?: string;
   terms?: string;
+  policies?: ITourPolicies;
+  settings?: ITourSettings;
 }
 
 export interface ITourDoc extends ITour, Document {}
