@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 
+import { masterModels } from '@/modules/masters/models/master.models.js';
 import catchAsync from '@/shared/utils/catchAsync.js';
 import pick from '@/shared/utils/pick.js';
 
@@ -12,12 +13,22 @@ const createTour = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getTours = catchAsync(async (req: Request, res: Response) => {
-  const filter = pick(req.query, ['name', 'destination', 'status', 'tourType', 'difficulty']);
+  const filter = pick(req.query, ['name', 'destination', 'status', 'tourType', 'tourCategory', 'difficulty', 'code']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate', 'fields', 'includeTimeStamps']);
 
   if (req.query.search) {
     const searchRegex = { $regex: req.query.search, $options: 'i' };
-    filter.$or = [{ name: searchRegex }, { code: searchRegex }, { destination: searchRegex }, { description: searchRegex }];
+    const matchedDestinations = await masterModels.destinations
+      .find({ name: searchRegex, deletedAt: null })
+      .select('_id')
+      .lean();
+    const destinationIds = matchedDestinations.map((item) => item._id);
+    filter.$or = [
+      { name: searchRegex },
+      { code: searchRegex },
+      { description: searchRegex },
+      ...(destinationIds.length > 0 ? [{ destinationIds: { $in: destinationIds } }] : []),
+    ];
   }
 
   const result = await tourService.queryTours(filter, options);
