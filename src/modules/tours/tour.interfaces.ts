@@ -24,6 +24,19 @@ export interface IPricingPolicy {
   extraPerson?: number;
 }
 
+export interface IBasePricing {
+  adult?: number;
+  child?: number;
+  infant?: number;
+}
+
+export interface ISeasonalPricing {
+  startDate?: Date;
+  endDate?: Date;
+  adjustmentType?: 'PERCENT';
+  value?: number;
+}
+
 export interface ITourFaq {
   question: string;
   answer: string;
@@ -85,6 +98,9 @@ export interface ITour {
   departureCities?: string[];
   batches?: ITourBatch[];
   pricingPolicy?: IPricingPolicy;
+  basePricing?: IBasePricing;
+  seasonalPricing?: ISeasonalPricing[];
+  sharingType?: string;
   validSharingTypes?: string[];
   faqs?: ITourFaq[];
   itinerary?: IItineraryDay[];

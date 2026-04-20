@@ -25,6 +25,25 @@ const pricingPolicySchema = new Schema(
   { _id: false },
 );
 
+const basePricingSchema = new Schema(
+  {
+    adult: { type: Number, min: 0 },
+    child: { type: Number, min: 0 },
+    infant: { type: Number, min: 0 },
+  },
+  { _id: false },
+);
+
+const seasonalPricingSchema = new Schema(
+  {
+    startDate: { type: Date },
+    endDate: { type: Date },
+    adjustmentType: { type: String, enum: ['PERCENT'], default: 'PERCENT' },
+    value: { type: Number },
+  },
+  { _id: false },
+);
+
 const faqSchema = new Schema(
   {
     question: { type: String, trim: true },
@@ -117,6 +136,9 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     departureCities: [{ type: String, trim: true }],
     batches: [tourBatchSchema],
     pricingPolicy: pricingPolicySchema,
+    basePricing: basePricingSchema,
+    seasonalPricing: [seasonalPricingSchema],
+    sharingType: { type: String, trim: true },
     validSharingTypes: [{ type: String, trim: true }],
     faqs: [faqSchema],
     itinerary: [itineraryDaySchema],
@@ -187,6 +209,8 @@ tourSchema.pre('validate', function normalizeTour() {
 
   if (!draft.duration && draft.durationDays) draft.duration = `${draft.durationDays} Days`;
   if (!draft.price && draft.priceWithTransport) draft.price = draft.priceWithTransport;
+  if ((!draft.price || draft.price <= 0) && typeof draft.basePricing?.adult === 'number')
+    draft.price = draft.basePricing.adult;
 
   if (!draft.code && draft.name) {
     const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();

@@ -19,6 +19,20 @@ const pricingPolicy = Joi.object({
   extraPerson: Joi.number().min(0).allow(null),
 });
 
+const basePricing = Joi.object({
+  adult: Joi.number().min(0).allow(null),
+  child: Joi.number().min(0).allow(null),
+  infant: Joi.number().min(0).allow(null),
+});
+
+const seasonalPricing = Joi.object({
+  id: Joi.string().allow('', null),
+  startDate: Joi.date().allow('', null),
+  endDate: Joi.date().allow('', null),
+  adjustmentType: Joi.string().valid('PERCENT').allow('', null),
+  value: Joi.number().allow(null),
+});
+
 const faq = Joi.object({
   question: Joi.string().allow('', null),
   answer: Joi.string().allow('', null),
@@ -102,6 +116,9 @@ const tourBody = {
   departureCities: Joi.array().items(Joi.string()),
   batches: Joi.array().items(batch),
   pricingPolicy,
+  basePricing,
+  seasonalPricing: Joi.array().items(seasonalPricing),
+  sharingType: Joi.string().allow('', null),
   validSharingTypes: Joi.array().items(Joi.string()),
   faqs: Joi.array().items(faq),
   itinerary: Joi.array().items(itineraryDay),

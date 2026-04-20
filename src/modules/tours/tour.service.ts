@@ -210,6 +210,44 @@ const normalizeTourPayload = (tourBody: Partial<ITour>): Partial<ITour> => {
   ];
   if (activityIds.length > 0) mutableBody.activityIds = [...new Set(activityIds)];
 
+  if (mutableBody.basePricing && typeof mutableBody.basePricing === 'object') {
+    const basePricing = mutableBody.basePricing as Record<string, unknown>;
+    mutableBody.basePricing = sanitizeDeep({
+      adult:
+        typeof basePricing.adult === 'number'
+          ? basePricing.adult
+          : toTrimmedString(basePricing.adult)
+            ? Number(basePricing.adult)
+            : undefined,
+      child:
+        typeof basePricing.child === 'number'
+          ? basePricing.child
+          : toTrimmedString(basePricing.child)
+            ? Number(basePricing.child)
+            : undefined,
+      infant:
+        typeof basePricing.infant === 'number'
+          ? basePricing.infant
+          : toTrimmedString(basePricing.infant)
+            ? Number(basePricing.infant)
+            : undefined,
+    }) as ITour['basePricing'];
+  }
+
+  if (Array.isArray(mutableBody.seasonalPricing))
+    mutableBody.seasonalPricing = mutableBody.seasonalPricing
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') return undefined;
+        const rule = entry as Record<string, unknown>;
+        return sanitizeDeep({
+          startDate: toTrimmedString(rule.startDate) ?? rule.startDate,
+          endDate: toTrimmedString(rule.endDate) ?? rule.endDate,
+          adjustmentType: toTrimmedString(rule.adjustmentType) ?? 'PERCENT',
+          value: typeof rule.value === 'number' ? rule.value : toTrimmedString(rule.value) ? Number(rule.value) : undefined,
+        });
+      })
+      .filter(Boolean) as ITour['seasonalPricing'];
+
   const media = normalizeMedia(mutableBody.media);
   if (media) mutableBody.media = media;
 
