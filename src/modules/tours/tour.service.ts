@@ -1,7 +1,9 @@
 /* eslint-disable camelcase */
 
 import httpStatus from 'http-status';
+import mongoose from 'mongoose';
 
+import { masterModels } from '@/modules/masters/models/master.models.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
@@ -31,6 +33,39 @@ const toPolicyArray = (value: unknown): string[] => {
       .filter(Boolean);
 
   return [];
+};
+
+const uniqueStrings = (values: unknown[]): string[] => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  values.forEach((value) => {
+    const normalized = toTrimmedString(value);
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    result.push(normalized);
+  });
+  return result;
+};
+
+const toObjectIdStrings = (values: unknown[]): string[] =>
+  uniqueStrings(values).filter((value) => mongoose.Types.ObjectId.isValid(value));
+
+const resolveTourTypeMeta = async (value: unknown): Promise<{ id: string; name?: string } | undefined> => {
+  const normalized = toTrimmedString(value);
+  if (!normalized) return undefined;
+
+  if (mongoose.Types.ObjectId.isValid(normalized)) {
+    const byId = await masterModels['tour-types'].findById(normalized).select('name').lean();
+    if (!byId?._id) return undefined;
+    return { id: String(byId._id), name: toTrimmedString(byId.name) };
+  }
+
+  const masterTourType = await masterModels['tour-types']
+    .findOne({ name: { $regex: `^${normalized}$`, $options: 'i' }, deletedAt: null })
+    .select('_id name')
+    .lean();
+  if (!masterTourType?._id) return undefined;
+  return { id: String(masterTourType._id), name: toTrimmedString(masterTourType.name) };
 };
 
 const sanitizeDeep = (value: unknown): unknown => {
@@ -192,7 +227,7 @@ const applyPolicyAliases = (payload: Record<string, unknown>) => {
     payload.terms = normalizedPolicies.termsAndConditions.join('\n');
 };
 
-const normalizeTourPayload = (tourBody: Partial<ITour>): Partial<ITour> => {
+const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<ITour>> => {
   const mutableBody = { ...(tourBody as Record<string, unknown>) };
 
   const status = normalizeStatus(mutableBody.status);
@@ -209,6 +244,23 @@ const normalizeTourPayload = (tourBody: Partial<ITour>): Partial<ITour> => {
       : []),
   ];
   if (activityIds.length > 0) mutableBody.activityIds = [...new Set(activityIds)];
+
+  const destinationIds = Array.isArray(mutableBody.destinationIds) ? toObjectIdStrings(mutableBody.destinationIds) : [];
+  if (destinationIds.length > 0) mutableBody.destinationIds = destinationIds;
+
+  const resolvedTourType = await resolveTourTypeMeta(mutableBody.tourType);
+  if (resolvedTourType) mutableBody.tourType = resolvedTourType.id;
+  else if (mutableBody.tourType !== undefined)
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid tourType. Provide a valid master tour type');
+
+  const departureCities = Array.isArray(mutableBody.departureCities) ? uniqueStrings(mutableBody.departureCities) : [];
+  if (departureCities.length > 0) mutableBody.departureCities = departureCities;
+
+  const inclusionIds = Array.isArray(mutableBody.inclusionIds) ? uniqueStrings(mutableBody.inclusionIds) : [];
+  if (inclusionIds.length > 0) mutableBody.inclusionIds = inclusionIds;
+
+  const exclusionIds = Array.isArray(mutableBody.exclusionIds) ? uniqueStrings(mutableBody.exclusionIds) : [];
+  if (exclusionIds.length > 0) mutableBody.exclusionIds = exclusionIds;
 
   if (mutableBody.basePricing && typeof mutableBody.basePricing === 'object') {
     const basePricing = mutableBody.basePricing as Record<string, unknown>;
@@ -296,7 +348,7 @@ const syncMediaFallbackFields = (payload: Partial<ITour>) => {
 };
 
 const createTour = async (tourBody: ITour): Promise<ITourDoc> => {
-  const normalizedBody = normalizeTourPayload(tourBody);
+  const normalizedBody = await normalizeTourPayload(tourBody);
   syncMediaFallbackFields(normalizedBody);
   await ensureUniqueCode(normalizedBody.code);
 
@@ -304,11 +356,19 @@ const createTour = async (tourBody: ITour): Promise<ITourDoc> => {
 };
 
 const queryTours = async (filter: Record<string, unknown>, options: PaginateOptions): Promise<QueryResult<ITourDoc>> => {
+  const normalizedFilter = { ...filter };
+
+  if (normalizedFilter.tourType) {
+    const resolvedTourType = await resolveTourTypeMeta(normalizedFilter.tourType);
+    if (resolvedTourType) normalizedFilter.tourType = resolvedTourType.id;
+    else normalizedFilter.tourType = '__NO_MATCH__';
+  }
+
   const limit = Math.min(Math.max(Number(options.limit ?? 10), 1), 100);
   const page = Math.max(Number(options.page ?? 1), 1);
 
   return TourModel.paginate(
-    { ...filter, isDeleted: false },
+    { ...normalizedFilter, isDeleted: false },
     {
       ...options,
       limit,
@@ -324,7 +384,7 @@ const updateTourById = async (tourId: string, updateBody: Partial<ITour>): Promi
   const tour = await getTourById(tourId);
   if (!tour) throw new ApiError(httpStatus.NOT_FOUND, 'Tour not found');
 
-  const payload: Partial<ITour> = normalizeTourPayload(updateBody);
+  const payload: Partial<ITour> = await normalizeTourPayload(updateBody);
   syncMediaFallbackFields(payload);
   await ensureUniqueCode(payload.code, tourId);
 

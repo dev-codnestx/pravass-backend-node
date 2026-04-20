@@ -81,7 +81,6 @@ export interface ITourSettings {
 export interface ITour {
   name: string;
   code?: string;
-  destination?: string;
   destinationIds?: Types.ObjectId[];
   continentId?: Types.ObjectId;
   duration: string;
@@ -90,7 +89,7 @@ export interface ITour {
   price: number;
   bookings: number;
   status: TourStatus;
-  tourType: string;
+  tourType?: Types.ObjectId;
   difficulty: TourDifficulty;
   description?: string;
   manager?: string;

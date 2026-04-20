@@ -246,7 +246,7 @@ const paginate = <T extends Document>(schema: Schema<T>): void => {
                   .forEach((field) => {
                     const fullPath = basePath ? `${basePath}.${field}` : field;
                     const value = getDeepValue(plainDoc, fullPath);
-                    if (value !== undefined) plainDoc[field] = value;
+                    if (value !== undefined && plainDoc[field] === undefined) plainDoc[field] = value;
                   });
               }
             });

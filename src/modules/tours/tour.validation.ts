@@ -106,7 +106,7 @@ const tourBody = {
     .lowercase()
     .valid(...tourStatuses)
     .default('draft'),
-  tourType: Joi.string().trim().required(),
+  tourType: Joi.string().trim().allow('', null),
   difficulty: Joi.string()
     .valid(...tourDifficulties)
     .default('Easy'),
@@ -165,7 +165,7 @@ const getTours = {
       .trim()
       .lowercase()
       .valid(...tourStatuses),
-    tourType: Joi.string(),
+    tourType: Joi.string().trim(),
     tourCategory: Joi.string(),
     code: Joi.string(),
     difficulty: Joi.string().valid(...tourDifficulties),

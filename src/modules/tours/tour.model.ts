@@ -110,7 +110,6 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
   {
     name: { type: String, required: true, trim: true, index: true },
     code: { type: String, trim: true, uppercase: true, index: true },
-    destination: { type: String, trim: true, index: true },
     destinationIds: { type: [Types.ObjectId], ref: 'MasterDestination', default: [] },
     continentId: { type: Types.ObjectId, ref: 'Continent', trim: true },
     duration: { type: String, required: true, trim: true },
@@ -124,7 +123,7 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
       default: 'draft',
       index: true,
     },
-    tourType: { type: String, required: true, trim: true, index: true },
+    tourType: { type: Types.ObjectId, ref: 'MasterTourType', index: true },
     difficulty: {
       type: String,
       enum: tourDifficulties,
@@ -189,6 +188,41 @@ const toPolicyArray = (value: unknown): string[] => {
   return [];
 };
 
+const uniqueTrimmedStrings = (values: unknown[]): string[] => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+
+  values.forEach((value) => {
+    const normalized = String(value ?? '').trim();
+    if (!normalized || seen.has(normalized)) return;
+    seen.add(normalized);
+    result.push(normalized);
+  });
+
+  return result;
+};
+
+const uniqueObjectIds = <T>(values: T[]): T[] => {
+  const seen = new Set<string>();
+  const result: T[] = [];
+
+  values.forEach((value) => {
+    const key = String(value).trim();
+    if (!key || seen.has(key)) return;
+    seen.add(key);
+    result.push(value);
+  });
+
+  return result;
+};
+
+const toSeasonKey = (startDate: unknown, endDate: unknown): string | null => {
+  const start = startDate instanceof Date ? startDate : new Date(String(startDate ?? ''));
+  const end = endDate instanceof Date ? endDate : new Date(String(endDate ?? ''));
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return null;
+  return `${start.toISOString()}::${end.toISOString()}`;
+};
+
 tourSchema.pre('validate', function normalizeTour() {
   const draft = this as ITourDoc & {
     policies?: {
@@ -211,6 +245,31 @@ tourSchema.pre('validate', function normalizeTour() {
   if (!draft.price && draft.priceWithTransport) draft.price = draft.priceWithTransport;
   if ((!draft.price || draft.price <= 0) && typeof draft.basePricing?.adult === 'number')
     draft.price = draft.basePricing.adult;
+
+  if (Array.isArray(draft.destinationIds)) draft.destinationIds = uniqueObjectIds(draft.destinationIds);
+
+  if (Array.isArray(draft.departureCities)) draft.departureCities = uniqueTrimmedStrings(draft.departureCities);
+
+  if (Array.isArray(draft.inclusionIds)) draft.inclusionIds = uniqueObjectIds(draft.inclusionIds);
+
+  if (Array.isArray(draft.exclusionIds)) draft.exclusionIds = uniqueObjectIds(draft.exclusionIds);
+
+  if (Array.isArray(draft.activityIds)) draft.activityIds = uniqueTrimmedStrings(draft.activityIds);
+
+  if (Array.isArray(draft.validSharingTypes)) draft.validSharingTypes = uniqueTrimmedStrings(draft.validSharingTypes);
+
+  if (Array.isArray(draft.seasonalPricing))
+    draft.seasonalPricing = draft.seasonalPricing.filter((season, index, arr) => {
+      if (!season?.startDate || !season?.endDate) return true;
+      const current = toSeasonKey(season.startDate, season.endDate);
+      if (!current) return true;
+      return (
+        arr.findIndex((entry) => {
+          if (!entry?.startDate || !entry?.endDate) return false;
+          return toSeasonKey(entry.startDate, entry.endDate) === current;
+        }) === index
+      );
+    });
 
   if (!draft.code && draft.name) {
     const suffix = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -265,10 +324,15 @@ tourSchema.pre('validate', function normalizeTour() {
           title: item.title || item.text,
         };
       })
-      .filter(Boolean) as ITourDoc['media'];
+      .filter(Boolean)
+      .filter((item, index, arr) => {
+        const key = `${item.type}::${item.url}`;
+        return arr.findIndex((entry) => `${entry.type}::${entry.url}` === key) === index;
+      }) as ITourDoc['media'];
 
   if ((!draft.gallery || draft.gallery.length === 0) && Array.isArray(draft.media))
     draft.gallery = draft.media.filter((item) => item.type === 'image').map((item) => item.url);
+  else if (Array.isArray(draft.gallery)) draft.gallery = uniqueTrimmedStrings(draft.gallery);
 
   if (!draft.videoUrl && Array.isArray(draft.media)) {
     const video = draft.media.find((item) => item.type === 'video');
@@ -282,6 +346,11 @@ tourSchema.pre('validate', function normalizeTour() {
     ];
     draft.media = nextMedia;
   }
+
+  if (Array.isArray(draft.itinerary) && draft.itinerary.length > 0)
+    draft.itinerary.forEach((day) => {
+      if (Array.isArray(day.activityIds)) day.activityIds = uniqueObjectIds(day.activityIds);
+    });
 });
 
 tourSchema.index(
@@ -295,7 +364,7 @@ tourSchema.index(
   },
 );
 tourSchema.index({ status: 1, tourType: 1, isDeleted: 1 });
-tourSchema.index({ name: 'text', destination: 'text', description: 'text' });
+tourSchema.index({ name: 'text', description: 'text' });
 
 tourSchema.plugin(toJSON);
 tourSchema.plugin(paginate);
