@@ -11,3 +11,4 @@ export const getObjectId = (value: string | Types.ObjectId): Types.ObjectId | st
 export const capitalize = (value: string): string => value.charAt(0).toUpperCase() + value.slice(1);
 
 export const generateSixDigitRandomNumber = () => Math.floor(100000 + Math.random() * 900000);
+export const generateFourDigitRandomNumber = () => Math.floor(1000 + Math.random() * 9000);

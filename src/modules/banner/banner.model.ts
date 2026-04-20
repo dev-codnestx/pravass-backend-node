@@ -6,7 +6,7 @@ import { CommonStatus } from '@/shared/constants/enum.constant.js';
 
 const bannerSchema = new Schema<IBannerDoc, IBannerModel>(
   {
-    title: { type: String, required: true, trim: true },
+    title: { type: String, trim: true },
     subtitle: { type: String, trim: true },
     placement: {
       type: String,
@@ -25,7 +25,7 @@ const bannerSchema = new Schema<IBannerDoc, IBannerModel>(
     isDeleted: { type: Boolean, default: false },
     ctaText: { type: String, trim: true },
     ctaLink: { type: String, trim: true },
-    image: { type: String, trim: true },
+    image: { type: String, trim: true, required: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
