@@ -74,6 +74,7 @@ const tagSchema = createMasterSchema({
 const inclusionExclusionSchema = createMasterSchema({
   type: { type: String, enum: ['inclusion', 'exclusion'] },
   category: { type: String, trim: true },
+  image: { type: String, trim: true },
 });
 
 const paymentPlanSchema = createMasterSchema({
