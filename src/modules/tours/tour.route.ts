@@ -31,4 +31,12 @@ router
   )
   .delete(authMiddleware(), validateMiddleware(tourValidation.deleteTour), tourController.deleteTour);
 
+router.post(
+  '/:tourId/duplicate',
+  authMiddleware(),
+  validateMiddleware(tourValidation.duplicateTour),
+  setAuditFields({ mode: AuditMode.CREATE }),
+  tourController.duplicateTour,
+);
+
 export default router;

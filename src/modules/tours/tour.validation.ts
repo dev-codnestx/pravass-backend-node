@@ -201,10 +201,17 @@ const deleteTour = {
   }),
 };
 
+const duplicateTour = {
+  params: Joi.object().keys({
+    tourId: Joi.string().required().custom(objectId),
+  }),
+};
+
 export const tourValidation = {
   createTour,
   getTours,
   getTour,
   updateTour,
   deleteTour,
+  duplicateTour,
 };

@@ -5,6 +5,7 @@ import mongoose from 'mongoose';
 
 import { masterModels } from '@/modules/masters/models/master.models.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
+import { cloneDocument } from '@/shared/utils/copy.command.js';
 import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
 import { ITour, ITourDoc, ITourMedia, ITourPolicies, TourStatus } from './tour.interfaces.js';
@@ -402,10 +403,32 @@ const deleteTourById = async (tourId: string): Promise<ITourDoc | null> => {
   return tour;
 };
 
+const duplicateTourById = async (tourId: string): Promise<ITourDoc> => {
+  const sourceTour = await getTourById(tourId);
+  if (!sourceTour) throw new ApiError(httpStatus.NOT_FOUND, 'Tour not found');
+
+  const sourceName = toTrimmedString(sourceTour.name) ?? 'Untitled Tour';
+  const clonedResult = await cloneDocument<any>({
+    model: TourModel,
+    id: String(sourceTour._id),
+    omitFields: ['deletedAt'],
+    overrides: {
+      name: `${sourceName} Copy`,
+      code: undefined,
+      status: 'draft',
+      isDeleted: false,
+    },
+  });
+
+  const clonedTour = Array.isArray(clonedResult) ? clonedResult[0] : clonedResult;
+  return clonedTour as ITourDoc;
+};
+
 export const tourService = {
   createTour,
   queryTours,
   getTourById,
   updateTourById,
   deleteTourById,
+  duplicateTourById,
 };

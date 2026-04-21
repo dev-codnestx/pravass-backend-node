@@ -51,10 +51,16 @@ const deleteTour = catchAsync(async (req: Request, res: Response) => {
   return res.success(null, 200, 'Tour deleted successfully');
 });
 
+const duplicateTour = catchAsync(async (req: Request, res: Response) => {
+  const tour = await tourService.duplicateTourById(req.params.tourId);
+  return res.success(tour, 200, 'Tour duplicated successfully');
+});
+
 export const tourController = {
   createTour,
   getTours,
   getTour,
   updateTour,
   deleteTour,
+  duplicateTour,
 };
