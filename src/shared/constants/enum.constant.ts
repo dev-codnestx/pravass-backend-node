@@ -18,6 +18,13 @@ export const applicationStatuses = ['Under Review', 'Shortlisted', 'Interview', 
 export enum CommonStatus {
   ACTIVE = 'active',
   INACTIVE = 'inactive',
+  LIVE = 'live',
+  DRAFT = 'draft',
+  ARCHIVED = 'archived',
+  EXPIRED = 'expired',
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
 }
 
 export const AuditMode = {

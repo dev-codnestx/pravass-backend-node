@@ -31,9 +31,10 @@ const toJSON = (schema: any) => {
         if (schema.paths[path].options && schema.paths[path].options.private) deleteAtPath(ret, path.split('.'), 0);
       });
 
-      ret.id = ret._id.toString();
-
-      delete ret._id;
+      if (ret._id !== undefined && ret._id !== null) {
+        ret.id = typeof ret._id?.toString === 'function' ? ret._id.toString() : String(ret._id);
+        delete ret._id;
+      }
 
       delete ret.__v;
 
