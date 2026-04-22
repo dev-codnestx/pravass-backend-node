@@ -9,6 +9,7 @@ import config from '@/shared/config/config.js';
 import { tokenService } from '../token/index.js';
 import { userService } from '../user/index.js';
 import { authService } from './index.js';
+import { oauthLogin } from './oauth/services/oauthLogin.service.js';
 
 const cookieSameSite: 'none' | 'lax' = config.env === 'production' ? 'none' : 'lax';
 
@@ -168,3 +169,11 @@ export const createAccount = catchAsync(async (req: Request, res: Response) => {
   setAuthCookies(res, payload.tokens);
   res.success(payload, responseCodes.AuthResponseCodes.SUCCESS, 'Account created successfully');
 });
+
+export const oauthLoginController = async (req: Request, res: Response) => {
+  const { provider, token } = req.body;
+
+  const result = await oauthLogin({ provider, token });
+
+  return res.success(result, responseCodes.AuthResponseCodes.SUCCESS, 'Login successful');
+};
