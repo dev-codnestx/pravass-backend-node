@@ -172,8 +172,9 @@ export const createAccount = catchAsync(async (req: Request, res: Response) => {
 
 export const oauthLoginController = async (req: Request, res: Response) => {
   const { provider, token } = req.body;
+  const userType = getPlatformSourceFromRequest(req);
 
-  const result = await oauthLogin({ provider, token });
+  const result = await oauthLogin({ provider, token }, userType);
 
   return res.success(result, responseCodes.AuthResponseCodes.SUCCESS, 'Login successful');
 };

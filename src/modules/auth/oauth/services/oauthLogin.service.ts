@@ -5,7 +5,7 @@ import { getUserByEmail, registerUser } from '@/modules/user/user.service.js';
 import { OAUTH_PARAMETER } from '../oauth.interface.js';
 import { verifyOAuthToken } from '../providers/oauth.factory.js';
 
-export const oauthLogin = async ({ provider, token }: OAUTH_PARAMETER) => {
+export const oauthLogin = async ({ provider, token }: OAUTH_PARAMETER, userType?: string) => {
   const oauthUser = await verifyOAuthToken({ provider, token });
 
   let user = await getUserByEmail(oauthUser.email);
@@ -15,6 +15,7 @@ export const oauthLogin = async ({ provider, token }: OAUTH_PARAMETER) => {
       email: oauthUser.email,
       name: oauthUser.name || '',
       password: crypto.randomBytes(24).toString('hex'),
+      userType,
       providers: [
         {
           name: provider,

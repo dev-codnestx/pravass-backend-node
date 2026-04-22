@@ -1,1 +1,4 @@
-export type OAUTH_PARAMETER = { provider: string; token: string };
+export type OAUTH_PARAMETER = {
+  provider: string;
+  token: string;
+};
