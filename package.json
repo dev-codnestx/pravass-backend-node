@@ -98,6 +98,7 @@
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.2.1",
     "fs": "^0.0.1-security",
+    "google-auth-library": "^10.6.2",
     "handlebars": "^4.7.9",
     "helmet": "^8.1.0",
     "http-status": "^2.1.0",

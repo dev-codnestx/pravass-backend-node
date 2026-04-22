@@ -1,9 +1,10 @@
 import type { Request, Response } from 'express';
 import httpStatus from 'http-status';
-import mongoose, { type Model } from 'mongoose';
+import { Types, type Model } from 'mongoose';
 
 import type { IMasterDoc } from '@/modules/masters/models/master.models.js';
 import { toMasterLabel, type MasterModuleKey, type MasterStatus } from '@/modules/masters/common/master.constants.js';
+import { getObjectId } from '@/shared/utils/commonHelper.js';
 import catchAsync from '@/shared/utils/catchAsync.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import responseCodes from '@/shared/utils/responseCode/responseCode.js';
@@ -36,9 +37,7 @@ const toObjectIdIfPossible = (value: unknown): unknown => {
   const trimmed = value.trim();
   if (!trimmed) return trimmed;
 
-  if (mongoose.Types.ObjectId.isValid(trimmed) && trimmed.length === 24) return new mongoose.Types.ObjectId(trimmed);
-
-  return trimmed;
+  return getObjectId(trimmed);
 };
 
 const coerceFilterValue = (value: unknown): unknown => {
@@ -124,6 +123,24 @@ const parsePopulate = (value: unknown): PopulateSpec[] => {
     }, []);
 };
 
+const escapeRegex = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const isLeadStageModule = (moduleKey: MasterModuleKey): boolean => moduleKey === 'lead-stages';
+
+const normalizeLeadStagePayload = (payload: Record<string, unknown>): Record<string, unknown> => {
+  const normalized = { ...payload };
+
+  if (typeof normalized.color === 'string') normalized.color = normalized.color.trim();
+
+  if (normalized.position !== undefined) {
+    const parsed = Number(normalized.position);
+    if (Number.isFinite(parsed) && parsed > 0) normalized.position = Math.floor(parsed);
+    else delete normalized.position;
+  }
+
+  return normalized;
+};
+
 const applyPopulate = <T extends { populate: (path: string, select?: string) => T }>(query: T, populateValue?: unknown) => {
   const specs = [...DEFAULT_POPULATE, ...parsePopulate(populateValue)];
   const seen = new Set<string>();
@@ -139,6 +156,24 @@ const applyPopulate = <T extends { populate: (path: string, select?: string) => 
 
 export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: MasterModuleKey) => {
   const label = toMasterLabel(moduleKey);
+  const enforceUniqueName = isLeadStageModule(moduleKey);
+
+  const validateUniqueName = async (name: string, excludeId?: string) => {
+    if (!enforceUniqueName) return;
+
+    const escapedName = escapeRegex(name.trim());
+    if (!escapedName) return;
+
+    const existing = await Model.findOne({
+      deletedAt: null,
+      name: { $regex: `^${escapedName}$`, $options: 'i' },
+      ...(excludeId ? { _id: { $ne: excludeId } } : {}),
+    })
+      .select('_id')
+      .lean();
+
+    if (existing) throw new ApiError(httpStatus.CONFLICT, `${label} name already exists`);
+  };
 
   return {
     list: catchAsync(async (req: Request, res: Response) => {
@@ -178,10 +213,15 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
     }),
 
     create: catchAsync(async (req: Request, res: Response) => {
-      const payload = normalizePayload(req.body as Record<string, unknown>, 'create');
+      let payload = normalizePayload(req.body as Record<string, unknown>, 'create');
+      if (isLeadStageModule(moduleKey)) payload = normalizeLeadStagePayload(payload);
 
       if (!payload.createdBy && req.user?.id) payload.createdBy = req.user.id;
       if (!payload.updatedBy && req.user?.id) payload.updatedBy = req.user.id;
+      if (typeof payload.name !== 'string' || !payload.name.trim())
+        throw new ApiError(httpStatus.BAD_REQUEST, `${label} name is required`);
+
+      await validateUniqueName(payload.name);
 
       const created = await Model.create(payload);
       const item = await applyPopulate(Model.findById(created._id), req.query.populate).lean();
@@ -192,9 +232,11 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
     }),
 
     update: catchAsync(async (req: Request, res: Response) => {
-      const payload = normalizePayload(req.body as Record<string, unknown>, 'update');
+      let payload = normalizePayload(req.body as Record<string, unknown>, 'update');
+      if (isLeadStageModule(moduleKey)) payload = normalizeLeadStagePayload(payload);
 
       if (req.user?.id) payload.updatedBy = req.user.id;
+      if (typeof payload.name === 'string' && payload.name.trim()) await validateUniqueName(payload.name, req.params.id);
 
       if (!Object.keys(payload).length)
         throw new ApiError(httpStatus.BAD_REQUEST, 'At least one updatable field is required');
@@ -229,6 +271,41 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
       if (!deleted) throw new ApiError(httpStatus.NOT_FOUND, `${label} not found`);
 
       res.success(null, responseCodes.LocationResponseCodes.SUCCESS, `${label} deleted successfully`);
+    }),
+
+    reorder: catchAsync(async (req: Request, res: Response) => {
+      if (!isLeadStageModule(moduleKey))
+        throw new ApiError(httpStatus.BAD_REQUEST, `Reordering is not supported for ${label}`);
+
+      const rawItems = Array.isArray((req.body as { items?: unknown[] }).items)
+        ? ((req.body as { items: unknown[] }).items as Array<Record<string, unknown>>)
+        : [];
+
+      const items = rawItems
+        .map((item, index) => ({
+          id: getObjectId(String(item?.id ?? '')),
+          position: Math.max(1, Number(item?.position) || index + 1),
+        }))
+        .filter((item): item is { id: Types.ObjectId; position: number } => item.id instanceof Types.ObjectId);
+
+      if (!items.length) throw new ApiError(httpStatus.BAD_REQUEST, 'At least one valid lead stage order entry is required');
+
+      await Promise.all(
+        items.map((item) =>
+          Model.findOneAndUpdate(
+            { _id: item.id, deletedAt: null },
+            {
+              $set: {
+                position: item.position,
+                ...(req.user?.id ? { updatedBy: req.user.id } : {}),
+              },
+            },
+            { runValidators: true },
+          ),
+        ),
+      );
+
+      res.success(null, responseCodes.LocationResponseCodes.SUCCESS, `${label} order updated successfully`);
     }),
   };
 };

@@ -45,6 +45,16 @@ const userSchema = new Schema<IUser>(
     twoFactorEnabled: { type: Boolean, default: false },
     refreshTokenVersion: { type: Number, default: 0 },
     profileImage: { type: String },
+    providers: [
+      {
+        name: {
+          type: String,
+        },
+        providerId: {
+          type: String,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

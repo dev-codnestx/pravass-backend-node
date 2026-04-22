@@ -24,4 +24,6 @@ router.post('/user/resend-otp', validate(authValidation.resendOtp), authControll
 router.post('/user/verify-otp', validate(authValidation.verifyOtp), authController.verifyOtp);
 router.post('/user/create-account', validate(authValidation.createAccount), authController.createAccount);
 
+router.post('/oauth-login', authController.oauthLoginController);
+
 export default router;

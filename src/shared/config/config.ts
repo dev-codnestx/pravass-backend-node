@@ -45,6 +45,8 @@ const envVarsSchema = Joi.object()
     FAST_2_SMS_MSG_ID: Joi.string().allow('').optional().description('Fast2SMS message id'),
     FAST_2_SMS_ROUTE: Joi.string().allow('').optional().description('Fast2SMS route'),
     ADMIN_FRONTEND_URL: Joi.string().required().description('Admin Client url'),
+    GOOGLE_CLIENT_ID: Joi.string().description('Google Client ID is missing'),
+    GOOGLE_CLIENT_SECRET: Joi.string().description('Google Client Secret is missing'),
   })
   .unknown();
 
@@ -102,6 +104,10 @@ const config = {
     senderId: envVars.FAST_2_SMS_SENDER_ID,
     msgId: envVars.FAST_2_SMS_MSG_ID,
     route: envVars.FAST_2_SMS_ROUTE,
+  },
+  google: {
+    clientId: envVars.GOOGLE_CLIENT_ID,
+    clientSecret: envVars.GOOGLE_CLIENT_SECRET,
   },
 };
 
