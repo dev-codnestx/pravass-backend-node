@@ -94,7 +94,7 @@ export interface ITour {
   description?: string;
   manager?: string;
   managerMobile?: string;
-  departureCities?: string[];
+  departureCities?: Types.ObjectId[];
   batches?: ITourBatch[];
   pricingPolicy?: IPricingPolicy;
   basePricing?: IBasePricing;

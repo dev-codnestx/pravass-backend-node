@@ -132,7 +132,7 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     description: { type: String, trim: true },
     manager: { type: String, trim: true },
     managerMobile: { type: String, trim: true },
-    departureCities: [{ type: String, trim: true }],
+    departureCities: [{ type: Types.ObjectId, ref: 'MasterDepartureCity' }],
     batches: [tourBatchSchema],
     pricingPolicy: pricingPolicySchema,
     basePricing: basePricingSchema,
@@ -248,7 +248,7 @@ tourSchema.pre('validate', function normalizeTour() {
 
   if (Array.isArray(draft.destinationIds)) draft.destinationIds = uniqueObjectIds(draft.destinationIds);
 
-  if (Array.isArray(draft.departureCities)) draft.departureCities = uniqueTrimmedStrings(draft.departureCities);
+  if (Array.isArray(draft.departureCities)) draft.departureCities = uniqueObjectIds(draft.departureCities);
 
   if (Array.isArray(draft.inclusionIds)) draft.inclusionIds = uniqueObjectIds(draft.inclusionIds);
 

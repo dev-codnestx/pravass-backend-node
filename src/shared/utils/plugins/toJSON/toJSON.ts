@@ -31,7 +31,7 @@ const toJSON = (schema: any) => {
         if (schema.paths[path].options && schema.paths[path].options.private) deleteAtPath(ret, path.split('.'), 0);
       });
 
-      ret.id = ret._id.toString();
+      ret.id = ret._id?.toString();
 
       delete ret._id;
 
