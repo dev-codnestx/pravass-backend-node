@@ -54,6 +54,8 @@ export const updateUser = {
       password: Joi.string().custom(password),
       fullName: Joi.string(),
       phoneNumber: Joi.string(),
+      birthdate: Joi.string().allow(''),
+      address: Joi.string().allow(''),
       dialCode: Joi.number().integer(),
       roleId: Joi.string().custom(objectId),
       status: statusSchema,
