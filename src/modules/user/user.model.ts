@@ -19,6 +19,7 @@ const userSchema = new Schema<IUser>(
     firstName: { type: String, trim: true },
     lastName: { type: String, trim: true },
     birthdate: { type: String, trim: true },
+    address: { type: String, trim: true },
     email: {
       type: String,
       lowercase: true,

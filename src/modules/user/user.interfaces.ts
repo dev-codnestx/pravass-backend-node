@@ -8,6 +8,7 @@ export interface IUser extends Document {
   firstName?: string;
   lastName?: string;
   birthdate?: string;
+  address?: string;
   email: string;
   phoneNumber?: string;
   phone?: string;
@@ -63,6 +64,7 @@ export interface NewUserBody {
   first_name?: string;
   last_name?: string;
   birthdate?: string;
+  address?: string;
   fullName?: string;
   phone?: string;
   platform_source?: string;
@@ -93,6 +95,7 @@ export interface UpdateUserBody {
   first_name?: string;
   last_name?: string;
   birthdate?: string;
+  address?: string;
   fullName?: string;
   phone?: string;
   platform_source?: string;
