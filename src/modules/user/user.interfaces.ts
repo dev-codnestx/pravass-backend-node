@@ -35,6 +35,12 @@ export interface IUser extends Document {
   resetFailedAttempts(): Promise<void>;
   generateOTP(channel: 'email' | 'sms', purpose: string, OtpModel: any): Promise<string>;
   verifyOTP(channel: 'email' | 'sms', purpose: string, code: string, OtpModel: any): Promise<boolean>;
+  providers?: [
+    {
+      name: string;
+      providerId: string;
+    },
+  ];
 }
 
 export type IUserDoc = IUser;
@@ -67,6 +73,12 @@ export interface NewUserBody {
   mustChangePassword?: boolean;
   twoFactorEnabled?: boolean;
   refreshTokenVersion?: number;
+  providers?: [
+    {
+      name: string;
+      providerId: string;
+    },
+  ];
 }
 
 export interface UpdateUserBody {
