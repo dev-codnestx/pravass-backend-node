@@ -54,4 +54,18 @@ export const mastersValidation = {
   deleteMaster: {
     params: idParams,
   },
+
+  reorderLeadStages: {
+    body: generateJoiValidation({
+      items: Joi.array()
+        .items(
+          Joi.object({
+            id: Joi.string().required().custom(objectId),
+            position: Joi.number().integer().min(1).required(),
+          }),
+        )
+        .min(1)
+        .required(),
+    }),
+  },
 };

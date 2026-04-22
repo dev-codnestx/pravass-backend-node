@@ -10,6 +10,7 @@ export const MASTER_MODULES = [
   'payment-plans',
   'refund-policies',
   'lead-sources',
+  'lead-stages',
   'transport-types',
   'transports',
   'vehicles',

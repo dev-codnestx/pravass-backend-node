@@ -51,6 +51,7 @@ const departureCitySchema = createMasterSchema({
   country: { type: String, trim: true },
   state: { type: String, trim: true },
   city: { type: String, trim: true },
+  image: { type: String, trim: true },
 });
 
 const hotelSchema = createMasterSchema({
@@ -92,6 +93,11 @@ const refundPolicySchema = createMasterSchema({
 
 const leadSourceSchema = createMasterSchema({
   description: { type: String, trim: true },
+});
+
+const leadStageSchema = createMasterSchema({
+  color: { type: String, trim: true },
+  position: { type: Number, min: 1 },
 });
 
 const transportTypeSchema = createMasterSchema({
@@ -146,6 +152,7 @@ export const masterModels: Record<MasterModuleKey, Model<IMasterDoc>> = {
   'payment-plans': model<IMasterDoc>('MasterPaymentPlan', paymentPlanSchema),
   'refund-policies': model<IMasterDoc>('MasterRefundPolicy', refundPolicySchema),
   'lead-sources': model<IMasterDoc>('MasterLeadSource', leadSourceSchema),
+  'lead-stages': model<IMasterDoc>('MasterLeadStage', leadStageSchema),
   'transport-types': model<IMasterDoc>('MasterTransportType', transportTypeSchema),
   transports: model<IMasterDoc>('MasterTransport', transportSchema),
   vehicles: model<IMasterDoc>('MasterVehicle', vehicleSchema),
