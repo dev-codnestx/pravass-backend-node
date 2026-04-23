@@ -173,6 +173,7 @@ const getTours = {
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
     search: Joi.string(),
+    destinationIds: Joi.alternatives().try(Joi.array().items(Joi.string().trim().custom(objectId)), Joi.string().trim()),
     populate: Joi.string(),
     fields: Joi.string(),
     includeTimeStamps: Joi.boolean(),

@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import httpStatus from 'http-status';
 
 import { masterModels } from '@/modules/masters/models/master.models.js';
+import { getObjectId } from '@/shared/utils/commonHelper.js';
 import catchAsync from '@/shared/utils/catchAsync.js';
 import pick from '@/shared/utils/pick.js';
 
@@ -15,6 +16,19 @@ const createTour = catchAsync(async (req: Request, res: Response) => {
 const getTours = catchAsync(async (req: Request, res: Response) => {
   const filter = pick(req.query, ['name', 'destination', 'status', 'tourType', 'tourCategory', 'difficulty', 'code']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate', 'fields', 'includeTimeStamps']);
+
+  const parseDestinationIds = (value: unknown) => {
+    const rawValues = Array.isArray(value) ? value : typeof value === 'string' ? value.split(',') : [];
+
+    return rawValues
+      .map((entry) => String(entry ?? '').trim())
+      .filter(Boolean)
+      .map((entry) => getObjectId(entry))
+      .filter((entry): entry is Exclude<typeof entry, string> => typeof entry !== 'string');
+  };
+
+  const destinationIds = parseDestinationIds(req.query.destinationIds);
+  if (destinationIds.length > 0) filter.destinationIds = { $in: destinationIds };
 
   if (req.query.search) {
     const searchRegex = { $regex: req.query.search, $options: 'i' };
