@@ -42,6 +42,7 @@ const locationSchema = createMasterSchema({
 const destinationSchema = createMasterSchema({
   description: { type: String, trim: true },
   image: { type: String, trim: true },
+  activityIds: [{ type: Schema.Types.ObjectId, ref: 'MasterActivity' }],
 });
 
 const departureCitySchema = createMasterSchema({
@@ -135,7 +136,6 @@ const tourTypeSchema = createMasterSchema({
 });
 
 const activitySchema = createMasterSchema({
-  destinationId: { type: Schema.Types.ObjectId, ref: 'MasterDestination' },
   description: { type: String, trim: true },
   image: { type: String, trim: true },
 });
