@@ -3,6 +3,7 @@ import { model, Schema, type Document, type Model } from 'mongoose';
 import { applyMasterBasePlugin, type MasterStatus } from '@/modules/masters/common/masterBase.plugin.js';
 import { type MasterModuleKey } from '@/modules/masters/common/master.constants.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
+import { TOUR_CATEGORY } from '@/shared/constants/enum.constant.js';
 
 export interface IMasterDoc extends Document {
   name: string;
@@ -42,6 +43,7 @@ const locationSchema = createMasterSchema({
 const destinationSchema = createMasterSchema({
   description: { type: String, trim: true },
   image: { type: String, trim: true },
+  category: { type: String, enum: ['domestic', 'international'] },
 });
 
 const departureCitySchema = createMasterSchema({
@@ -51,6 +53,9 @@ const departureCitySchema = createMasterSchema({
   country: { type: String, trim: true },
   state: { type: String, trim: true },
   city: { type: String, trim: true },
+  image: { type: String, trim: true },
+  description: { type: String, trim: true },
+  category: { type: String, trim: true, enum: TOUR_CATEGORY, default: TOUR_CATEGORY.DOMESTIC },
 });
 
 const hotelSchema = createMasterSchema({

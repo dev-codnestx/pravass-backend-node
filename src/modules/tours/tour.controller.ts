@@ -36,7 +36,8 @@ const getTours = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getTour = catchAsync(async (req: Request, res: Response) => {
-  const tour = await tourService.getTourById(req.params.tourId);
+  const options = pick(req.query, ['populate', 'fields']);
+  const tour = await tourService.getTourById(req.params.tourId, options);
   if (!tour) return res.status(httpStatus.NOT_FOUND).error('Tour not found');
   return res.success(tour, 200, 'Tour fetched successfully');
 });
