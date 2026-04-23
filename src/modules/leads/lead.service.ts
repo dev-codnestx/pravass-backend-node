@@ -1,6 +1,7 @@
 import httpStatus from 'http-status';
 import { Types } from 'mongoose';
 
+import { customerService } from '@/modules/customers/index.js';
 import { masterModels } from '@/modules/masters/models/master.models.js';
 import TourModel from '@/modules/tours/tour.model.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
@@ -12,9 +13,15 @@ import { LeadStatus } from './lead.constants.js';
 import { ILead, ILeadDoc } from './lead.interfaces.js';
 import LeadModel from './lead.model.js';
 
-const DEFAULT_LEAD_POPULATE = 'tourId:name;destinationId:name;sourceId:name;assignedToId:fullName;leadStageId:name';
+const DEFAULT_LEAD_POPULATE =
+  'tourId:name;destinationId:name;sourceId:name;assignedToId:fullName;leadStageId:name;activities.createdBy:fullName';
 
 const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const getActivityActor = (actor?: { userId?: string; userName?: string }) => ({
+  userName: String(actor?.userName ?? 'System').trim() || 'System',
+  createdBy: actor?.userId && Types.ObjectId.isValid(actor.userId) ? new Types.ObjectId(actor.userId) : undefined,
+});
 
 const normalizeCategory = (value: unknown): string => {
   const next = String(value ?? '').trim();
@@ -176,7 +183,7 @@ const normalizeLeadPayload = async (payload: Partial<ILead>, isCreate: boolean):
   return next;
 };
 
-const createLead = async (leadBody: ILead): Promise<ILeadDoc> => {
+const createLead = async (leadBody: ILead, actor?: { userId?: string; userName?: string }): Promise<ILeadDoc> => {
   const payload = await normalizeLeadPayload(leadBody, true);
   const activities = Array.isArray(payload.activities) ? payload.activities : [];
   if (activities.length === 0)
@@ -185,7 +192,7 @@ const createLead = async (leadBody: ILead): Promise<ILeadDoc> => {
         type: 'Note',
         content: 'Lead created',
         timestamp: new Date(),
-        userName: 'System',
+        ...getActivityActor(actor),
       },
     ];
 
@@ -201,7 +208,9 @@ const queryLeads = async (
     {
       ...options,
       sortBy: options.sortBy || 'createdAt:desc',
-      populate: options.populate || 'tourId:name;destinationId:name;sourceId:name;assignedToId:fullName;leadStageId:name',
+      populate:
+        options.populate ||
+        'tourId:name;destinationId:name;sourceId:name;assignedToId:fullName;leadStageId:name;activities.createdBy:fullName',
     },
   );
 
@@ -222,7 +231,11 @@ const getLeadById = async (id: string, options?: { fields?: string; populate?: s
   }
 };
 
-const updateLeadById = async (leadId: string, updateBody: Partial<ILead>): Promise<ILeadDoc | null> => {
+const updateLeadById = async (
+  leadId: string,
+  updateBody: Partial<ILead>,
+  actor?: { userId?: string; userName?: string },
+): Promise<ILeadDoc | null> => {
   const lead = await getLeadById(leadId);
   if (!lead) throw new ApiError(httpStatus.NOT_FOUND, 'Lead not found');
 
@@ -260,7 +273,7 @@ const updateLeadById = async (leadId: string, updateBody: Partial<ILead>): Promi
       type: 'StatusChange',
       content: `Lead updated: ${changedFields.join(', ')}`,
       timestamp: new Date(),
-      userName: 'System',
+      ...getActivityActor(actor),
     });
 
   await lead.save();
@@ -278,6 +291,7 @@ const deleteLeadById = async (leadId: string): Promise<ILeadDoc | null> => {
 const updateLeadStatus = async (
   leadId: string,
   payload: { category?: string; leadStageId?: unknown },
+  actor?: { userId?: string; userName?: string },
 ): Promise<ILeadDoc | null> => {
   const lead = await getLeadById(leadId);
   if (!lead) throw new ApiError(httpStatus.NOT_FOUND, 'Lead not found');
@@ -311,7 +325,7 @@ const updateLeadStatus = async (
     type: 'StatusChange',
     content: `Status changed from ${previousCategory} to ${nextCategory}`,
     timestamp: new Date(),
-    userName: 'System',
+    ...getActivityActor(actor),
   });
   await lead.save();
   return lead;
@@ -363,7 +377,11 @@ const reorderLeadsByCategory = async (
   }).sort({ stageOrder: 1, createdAt: 1 });
 };
 
-const addNote = async (leadId: string, note: string): Promise<ILeadDoc | null> => {
+const addNote = async (
+  leadId: string,
+  note: string,
+  actor?: { userId?: string; userName?: string },
+): Promise<ILeadDoc | null> => {
   const lead = await getLeadById(leadId);
   if (!lead) throw new ApiError(httpStatus.NOT_FOUND, 'Lead not found');
 
@@ -375,7 +393,7 @@ const addNote = async (leadId: string, note: string): Promise<ILeadDoc | null> =
     type: 'Note',
     content: trimmed,
     timestamp: new Date(),
-    userName: 'System',
+    ...getActivityActor(actor),
   });
 
   await lead.save();
@@ -391,6 +409,7 @@ const addFollowUp = async (
     dueTime?: string;
     priority?: 'Low' | 'Medium' | 'High';
   },
+  actor?: { userId?: string; userName?: string },
 ): Promise<ILeadDoc | null> => {
   const lead = await getLeadById(leadId);
   if (!lead) throw new ApiError(httpStatus.NOT_FOUND, 'Lead not found');
@@ -415,13 +434,17 @@ const addFollowUp = async (
     type: 'Note',
     content: `Reminder added (${String(followUp.taskType ?? 'Follow-up')}): ${String(followUp.title ?? '').trim() || 'Task'}`,
     timestamp: new Date(),
-    userName: 'System',
+    ...getActivityActor(actor),
   });
   await lead.save();
   return lead;
 };
 
-const completeFollowUp = async (leadId: string, followUpId: string): Promise<ILeadDoc | null> => {
+const completeFollowUp = async (
+  leadId: string,
+  followUpId: string,
+  actor?: { userId?: string; userName?: string },
+): Promise<ILeadDoc | null> => {
   const lead = await getLeadById(leadId);
   if (!lead) throw new ApiError(httpStatus.NOT_FOUND, 'Lead not found');
 
@@ -440,7 +463,7 @@ const completeFollowUp = async (leadId: string, followUpId: string): Promise<ILe
       type: 'StatusChange',
       content: `Reminder completed: ${String(followUp.title ?? '').trim() || 'Task'}`,
       timestamp: new Date(),
-      userName: 'System',
+      ...getActivityActor(actor),
     });
   }
 
@@ -451,6 +474,7 @@ const completeFollowUp = async (leadId: string, followUpId: string): Promise<ILe
 const logActivity = async (
   leadId: string,
   payload: { type: 'Call' | 'Email' | 'Note' | 'StatusChange'; content: string; userName?: string },
+  actor?: { userId?: string; userName?: string },
 ): Promise<ILeadDoc | null> => {
   const lead = await getLeadById(leadId);
   if (!lead) throw new ApiError(httpStatus.NOT_FOUND, 'Lead not found');
@@ -459,24 +483,38 @@ const logActivity = async (
     type: payload.type,
     content: String(payload.content ?? '').trim(),
     timestamp: new Date(),
-    userName: String(payload.userName ?? 'System').trim() || 'System',
+    userName: String(payload.userName ?? actor?.userName ?? 'System').trim() || 'System',
+    createdBy: actor?.userId && Types.ObjectId.isValid(actor.userId) ? new Types.ObjectId(actor.userId) : undefined,
   });
   await lead.save();
   return lead;
 };
 
-const convertLeadToCustomer = async (leadId: string): Promise<ILeadDoc | null> => {
+const convertLeadToCustomer = async (
+  leadId: string,
+  actor?: { userId?: string; userName?: string },
+): Promise<ILeadDoc | null> => {
   const lead = await getLeadById(leadId);
   if (!lead) throw new ApiError(httpStatus.NOT_FOUND, 'Lead not found');
+
+  const conversionResult = await customerService.createOrGetCustomer({
+    fullName: String(lead.name ?? '').trim(),
+    email: String(lead.email ?? '').trim() || undefined,
+    phoneNumber: String(lead.phone ?? '').trim() || undefined,
+    status: 'active',
+  });
+  const customerCreated = conversionResult.created;
 
   const convertedStage = await resolveMasterIdByName(masterModels['lead-stages'], 'Converted');
   if (convertedStage) lead.leadStageId = convertedStage;
   lead.status = 'converted';
   lead.activities.unshift({
     type: 'StatusChange',
-    content: 'Lead converted to customer',
+    content: customerCreated
+      ? `Lead converted to customer (${conversionResult.customer.fullName || 'Customer'})`
+      : `Lead linked to existing customer (${conversionResult.customer.fullName || 'Customer'})`,
     timestamp: new Date(),
-    userName: 'System',
+    ...getActivityActor(actor),
   });
   await lead.save();
   return lead;

@@ -20,6 +20,7 @@ const activitySchema = new Schema(
     content: { type: String, trim: true, required: true },
     timestamp: { type: Date, default: Date.now },
     userName: { type: String, trim: true, default: 'System' },
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
   },
   {
     timestamps: false,

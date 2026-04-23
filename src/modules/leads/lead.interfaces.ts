@@ -9,6 +9,7 @@ export interface ILeadActivity {
   content: string;
   timestamp: Date;
   userName: string;
+  createdBy?: Types.ObjectId;
 }
 
 export interface ILeadFollowUp {
