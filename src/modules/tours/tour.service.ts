@@ -6,9 +6,10 @@ import mongoose from 'mongoose';
 import { masterModels } from '@/modules/masters/models/master.models.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { cloneDocument } from '@/shared/utils/copy.command.js';
+import { getEntityByIdWithQueryString } from '@/shared/utils/modelPopulateFields.js';
 import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
 
-import { ITour, ITourDoc, ITourMedia, ITourPolicies, TourStatus } from './tour.interfaces.js';
+import { IDeparture, ITour, ITourDoc, ITourMedia, ITourPolicies, TourStatus } from './tour.interfaces.js';
 import TourModel from './tour.model.js';
 
 const normalizeStatus = (status: unknown): TourStatus | undefined => {
@@ -76,6 +77,7 @@ const sanitizeDeep = (value: unknown): unknown => {
   }
 
   if (value && typeof value === 'object') {
+    if (value instanceof Date) return value;
     const pairs = Object.entries(value as Record<string, unknown>)
       .map(([key, entry]) => [key, sanitizeDeep(entry)] as const)
       .filter(([, entry]) => entry !== undefined);
@@ -185,6 +187,87 @@ const normalizeItinerary = (rawItinerary: unknown): ITour['itinerary'] | undefin
   return normalized.length > 0 ? normalized : undefined;
 };
 
+const normalizeDepartures = (rawDepartures: unknown): ITour['departures'] | undefined => {
+  if (!Array.isArray(rawDepartures)) return undefined;
+
+  const normalized = rawDepartures
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const item = entry as Record<string, unknown>;
+
+      const startDate = toTrimmedString(item.startDate) ?? item.startDate;
+      const endDate = toTrimmedString(item.endDate) ?? item.endDate;
+
+      const flightOptions = (Array.isArray(item.flightOptions) ? item.flightOptions : []).map((option: any) =>
+        sanitizeDeep({
+          id: toTrimmedString(option.id),
+          airlineName: toTrimmedString(option.airlineName),
+          flightNumber: toTrimmedString(option.flightNumber),
+          from: toTrimmedString(option.from),
+          to: toTrimmedString(option.to),
+          departureTime: toTrimmedString(option.departureTime),
+          arrivalTime: toTrimmedString(option.arrivalTime),
+          duration: toTrimmedString(option.duration),
+          type: toTrimmedString(option.type),
+          seats: typeof option.seats === 'number' ? option.seats : undefined,
+          totalSeats: typeof option.totalSeats === 'number' ? option.totalSeats : undefined,
+        }),
+      );
+
+      const seatStates = (Array.isArray(item.seatStates) ? item.seatStates : []).map((seat: any) =>
+        sanitizeDeep({
+          seat_no: toTrimmedString(seat.seat_no),
+          status: toTrimmedString(seat.status),
+          row: typeof seat.row === 'number' ? seat.row : undefined,
+          column: typeof seat.column === 'number' ? seat.column : undefined,
+        }),
+      );
+
+      const departureCities = (Array.isArray(item.departureCities) ? item.departureCities : []).map((cityEntry: any) =>
+        sanitizeDeep({
+          city: toTrimmedString(cityEntry.city),
+          joiningPoints: (Array.isArray(cityEntry.joiningPoints) ? cityEntry.joiningPoints : []).map((p: any) =>
+            sanitizeDeep({ name: toTrimmedString(p.name), time: toTrimmedString(p.time) }),
+          ),
+          leavingPoints: (Array.isArray(cityEntry.leavingPoints) ? cityEntry.leavingPoints : []).map((p: any) =>
+            sanitizeDeep({ name: toTrimmedString(p.name), time: toTrimmedString(p.time) }),
+          ),
+        }),
+      );
+
+      const normalizedDeparture = sanitizeDeep({
+        id: toTrimmedString(item.id),
+        cityId: toTrimmedString(item.cityId),
+        cityIds: Array.isArray(item.cityIds) ? uniqueStrings(item.cityIds) : undefined,
+        startDate: startDate ? new Date(startDate as any) : undefined,
+        endDate: endDate ? new Date(endDate as any) : undefined,
+        transportMode: toTrimmedString(item.transportMode),
+        transportTypeId: toTrimmedString(item.transportTypeId),
+        transportId: toTrimmedString(item.transportId) ?? toTrimmedString(item.transport_id),
+        transport_id: toTrimmedString(item.transport_id) ?? toTrimmedString(item.transportId),
+        vehicleId: toTrimmedString(item.vehicleId),
+        seats: typeof item.seats === 'number' ? item.seats : undefined,
+        price: typeof item.price === 'number' ? item.price : undefined,
+        joiningLeavingAllowed: typeof item.joiningLeavingAllowed === 'boolean' ? item.joiningLeavingAllowed : undefined,
+        departureCities: departureCities.length > 0 ? departureCities : undefined,
+        joiningPoints: Array.isArray(item.joiningPoints) ? uniqueStrings(item.joiningPoints) : undefined,
+        leavingPoints: Array.isArray(item.leavingPoints) ? uniqueStrings(item.leavingPoints) : undefined,
+        totalSeatsAvailable: typeof item.totalSeatsAvailable === 'number' ? item.totalSeatsAvailable : undefined,
+        airlineName: toTrimmedString(item.airlineName),
+        flightNumber: toTrimmedString(item.flightNumber),
+        flightOptions: flightOptions.length > 0 ? flightOptions : undefined,
+        trainName: toTrimmedString(item.trainName),
+        trainNumber: toTrimmedString(item.trainNumber),
+        seatStates: seatStates.length > 0 ? seatStates : undefined,
+      });
+
+      return normalizedDeparture as IDeparture;
+    })
+    .filter(Boolean) as IDeparture[];
+
+  return normalized.length > 0 ? normalized : undefined;
+};
+
 const applyPolicyAliases = (payload: Record<string, unknown>) => {
   const policies =
     payload.policies && typeof payload.policies === 'object'
@@ -250,12 +333,44 @@ const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<I
   if (destinationIds.length > 0) mutableBody.destinationIds = destinationIds;
 
   const resolvedTourType = await resolveTourTypeMeta(mutableBody.tourType);
+  // eslint-disable-next-line require-atomic-updates
   if (resolvedTourType) mutableBody.tourType = resolvedTourType.id;
   else if (mutableBody.tourType !== undefined)
     throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid tourType. Provide a valid master tour type');
 
-  const departureCities = Array.isArray(mutableBody.departureCities) ? uniqueStrings(mutableBody.departureCities) : [];
-  if (departureCities.length > 0) mutableBody.departureCities = departureCities;
+  const departureCities = Array.isArray(mutableBody.departureCities)
+    ? mutableBody.departureCities
+        .map((entry) => (typeof entry === 'object' ? entry : toTrimmedString(entry)))
+        .filter(Boolean)
+    : [];
+  if (departureCities.length > 0)
+    if (typeof departureCities[0] === 'string') mutableBody.departureCities = uniqueStrings(departureCities);
+    else
+      // It's already the new structure or mixed, let it be for now or handle as needed
+      mutableBody.departureCities = departureCities;
+
+  const departures = normalizeDepartures(mutableBody.departures);
+  if (departures) {
+    mutableBody.departures = departures;
+
+    // Auto-populate root departureCities from departures.cityIds
+    const allCityIds = departures.flatMap((dep) => dep.cityIds || []).filter(Boolean);
+    if (allCityIds.length > 0) {
+      const existingCities = Array.isArray(mutableBody.departureCities) ? mutableBody.departureCities : [];
+      mutableBody.departureCities = uniqueStrings([...existingCities, ...allCityIds] as string[]);
+    }
+  } else if (Array.isArray(mutableBody.batches) && mutableBody.batches.length > 0) {
+    // Map batches to departures if no explicit departures are provided
+    mutableBody.departures = normalizeDepartures(
+      mutableBody.batches.map((batch: any) => ({
+        id: batch.id,
+        startDate: batch.date,
+        transportMode: mutableBody.transportType || 'BUS', // Fallback to BUS
+        vehicleId: mutableBody.vehicleId,
+        price: mutableBody.price,
+      })),
+    );
+  }
 
   const inclusionIds = Array.isArray(mutableBody.inclusionIds) ? uniqueStrings(mutableBody.inclusionIds) : [];
   if (inclusionIds.length > 0) mutableBody.inclusionIds = inclusionIds;
@@ -379,7 +494,24 @@ const queryTours = async (filter: Record<string, unknown>, options: PaginateOpti
   );
 };
 
-const getTourById = async (id: string): Promise<ITourDoc | null> => TourModel.findOne({ _id: id, isDeleted: false });
+const getTourById = async (id: string, options?: { populate?: string; fields?: string }): Promise<ITourDoc | null> => {
+  if (options && (options.populate || options.fields))
+    try {
+      const tour = await getEntityByIdWithQueryString({
+        model: TourModel,
+        entityId: id,
+        populate: options.populate,
+        fields: options.fields,
+      });
+      if (tour.isDeleted) return null;
+      return tour;
+    } catch (err: any) {
+      if (err.statusCode === 200 || err.statusCode === 404) return null;
+      throw err;
+    }
+
+  return TourModel.findOne({ _id: id, isDeleted: false });
+};
 
 const updateTourById = async (tourId: string, updateBody: Partial<ITour>): Promise<ITourDoc | null> => {
   const tour = await getTourById(tourId);

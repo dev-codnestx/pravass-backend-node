@@ -5,13 +5,86 @@ import { Schema, Types, model } from 'mongoose';
 import { TOUR_CATEGORY } from '@/shared/constants/enum.constant.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 
-import { batchStatuses, ITourDoc, ITourModel, tourDifficulties, tourMediaTypes, tourStatuses } from './tour.interfaces.js';
+import {
+  departureFlightTypes,
+  departureTransportModes,
+  departureTypes,
+  ITourDoc,
+  ITourModel,
+  seatStatuses,
+  tourDifficulties,
+  tourMediaTypes,
+  tourStatuses,
+} from './tour.interfaces.js';
 
-const tourBatchSchema = new Schema(
+const joiningLeavingPointSchema = new Schema(
+  {
+    name: { type: String, trim: true, required: true },
+    time: { type: String, trim: true },
+  },
+  { _id: false },
+);
+
+const departureCitySchema = new Schema(
+  {
+    city: { type: String, trim: true, required: true },
+    joiningPoints: [joiningLeavingPointSchema],
+    leavingPoints: [joiningLeavingPointSchema],
+  },
+  { _id: false },
+);
+
+const flightOptionSchema = new Schema(
   {
     id: { type: String, trim: true },
-    date: { type: Date },
-    status: { type: String, enum: batchStatuses, default: 'Active' },
+    airlineName: { type: String, trim: true },
+    flightNumber: { type: String, trim: true },
+    from: { type: String, trim: true },
+    to: { type: String, trim: true },
+    departureTime: { type: String, trim: true },
+    arrivalTime: { type: String, trim: true },
+    duration: { type: String, trim: true },
+    type: { type: String, enum: departureFlightTypes },
+    seats: { type: Number, min: 0 },
+    totalSeats: { type: Number, min: 0 },
+  },
+  { _id: false },
+);
+
+const seatStateSchema = new Schema(
+  {
+    seat_no: { type: String, trim: true, required: true },
+    status: { type: String, enum: seatStatuses, default: 'available' },
+    row: { type: Number },
+    column: { type: Number },
+  },
+  { _id: false },
+);
+
+const departureSchema = new Schema(
+  {
+    id: { type: String, trim: true },
+    cityId: { type: Types.ObjectId, ref: 'MasterDepartureCity' },
+    cityIds: [{ type: String, trim: true }],
+    startDate: { type: Date },
+    endDate: { type: Date },
+    transportMode: { type: String, enum: departureTransportModes },
+    transportTypeId: { type: Types.ObjectId, ref: 'MasterTransportType' },
+    transportId: { type: String, trim: true },
+    vehicleId: { type: String, trim: true },
+    seats: { type: Number, min: 0 },
+    price: { type: Number, min: 0 },
+    joiningLeavingAllowed: { type: Boolean },
+    departureCities: [departureCitySchema],
+    joiningPoints: [{ type: String, trim: true }],
+    leavingPoints: [{ type: String, trim: true }],
+    totalSeatsAvailable: { type: Number, min: 0 },
+    airlineName: { type: String, trim: true },
+    flightNumber: { type: String, trim: true },
+    flightOptions: [flightOptionSchema],
+    trainName: { type: String, trim: true },
+    trainNumber: { type: String, trim: true },
+    seatStates: [seatStateSchema],
   },
   { _id: false },
 );
@@ -55,6 +128,7 @@ const faqSchema = new Schema(
 const itineraryDaySchema = new Schema(
   {
     day: { type: Number, min: 1 },
+    dayNumber: { type: Number, min: 1 },
     title: { type: String, trim: true },
     description: { type: String, trim: true },
     hotelId: { type: Types.ObjectId, ref: 'MasterHotel' },
@@ -109,6 +183,7 @@ const tourSettingsSchema = new Schema(
 const tourSchema = new Schema<ITourDoc, ITourModel>(
   {
     name: { type: String, required: true, trim: true, index: true },
+    slug: { type: String, trim: true, lowercase: true, index: true },
     code: { type: String, trim: true, uppercase: true, index: true },
     destinationIds: { type: [Types.ObjectId], ref: 'MasterDestination', default: [] },
     continentId: { type: Types.ObjectId, ref: 'Continent', trim: true },
@@ -132,8 +207,9 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     description: { type: String, trim: true },
     manager: { type: String, trim: true },
     managerMobile: { type: String, trim: true },
-    departureCities: [{ type: String, trim: true }],
-    batches: [tourBatchSchema],
+    departureCities: [{ type: Types.ObjectId, ref: 'MasterDepartureCity' }],
+    departureType: { type: String, enum: departureTypes },
+    departures: [departureSchema],
     pricingPolicy: pricingPolicySchema,
     basePricing: basePricingSchema,
     seasonalPricing: [seasonalPricingSchema],
@@ -170,6 +246,7 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     terms: { type: String, trim: true },
     policies: tourPoliciesSchema,
     settings: tourSettingsSchema,
+    highlights: { type: [String], trim: true },
   },
   {
     timestamps: true,
@@ -248,7 +325,7 @@ tourSchema.pre('validate', function normalizeTour() {
 
   if (Array.isArray(draft.destinationIds)) draft.destinationIds = uniqueObjectIds(draft.destinationIds);
 
-  if (Array.isArray(draft.departureCities)) draft.departureCities = uniqueTrimmedStrings(draft.departureCities);
+  if (Array.isArray(draft.departureCities)) draft.departureCities = uniqueObjectIds(draft.departureCities);
 
   if (Array.isArray(draft.inclusionIds)) draft.inclusionIds = uniqueObjectIds(draft.inclusionIds);
 
@@ -279,6 +356,15 @@ tourSchema.pre('validate', function normalizeTour() {
       .slice(0, 12)
       .toUpperCase()}-${suffix}`;
   }
+
+  if (!draft.slug && draft.name)
+    draft.slug = draft.name
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
 
   const existingPolicies = draft.policies ?? {};
   const payment = [
