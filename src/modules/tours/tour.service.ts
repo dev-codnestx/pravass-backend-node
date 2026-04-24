@@ -104,11 +104,20 @@ const normalizeMedia = (rawMedia: unknown): ITourMedia[] | undefined => {
       const typeRaw = toTrimmedString(item.type)?.toLowerCase();
       const type: ITourMedia['type'] =
         typeRaw === 'video' || typeRaw === 'document' || typeRaw === 'image' ? typeRaw : 'image';
+      const isCover =
+        typeof item.isCover === 'boolean'
+          ? item.isCover
+          : typeof item.cover === 'boolean'
+            ? item.cover
+            : typeof item.is_cover === 'boolean'
+              ? item.is_cover
+              : undefined;
       const fallbackLabel = url.split('/').pop()?.split('?')[0] || `Media ${index + 1}`;
       const text = toTrimmedString(item.text) ?? toTrimmedString(item.title) ?? fallbackLabel;
       return {
         url,
         type,
+        isCover,
         alt_text: toTrimmedString(item.alt_text) ?? fallbackLabel,
         title: toTrimmedString(item.title) ?? text,
         text,
@@ -430,7 +439,7 @@ const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<I
     const videoUrl = toTrimmedString(mutableBody.videoUrl);
     if (gallery.length > 0 || videoUrl)
       mutableBody.media = [
-        ...gallery.map((url) => ({ url, type: 'image' as const })),
+        ...gallery.map((url, index) => ({ url, type: 'image' as const, isCover: index === 0 })),
         ...(videoUrl ? [{ url: videoUrl, type: 'video' as const }] : []),
       ];
   }

@@ -155,6 +155,7 @@ const tourMediaSchema = new Schema(
   {
     url: { type: String, trim: true, required: true },
     type: { type: String, enum: tourMediaTypes, default: 'image' },
+    isCover: { type: Boolean, default: false },
     alt_text: { type: String, trim: true },
     title: { type: String, trim: true },
     text: { type: String, trim: true },
@@ -397,15 +398,24 @@ tourSchema.pre('validate', function normalizeTour() {
 
   if (Array.isArray(draft.media) && draft.media.length > 0)
     draft.media = draft.media
-      .map((item: ITourDoc['media'][number] & { file?: string }) => {
+      .map((item: ITourDoc['media'][number] & { file?: string; cover?: boolean; is_cover?: boolean }) => {
         const legacyFile = typeof item.file === 'string' ? item.file.trim() : '';
         const currentUrl = typeof item.url === 'string' ? item.url.trim() : '';
         const url = currentUrl || legacyFile;
         if (!url) return null;
+        const isCover =
+          typeof item.isCover === 'boolean'
+            ? item.isCover
+            : typeof item.cover === 'boolean'
+              ? item.cover
+              : typeof item.is_cover === 'boolean'
+                ? item.is_cover
+                : false;
 
         return {
           ...item,
           url,
+          isCover,
           text: item.text || item.title,
           title: item.title || item.text,
         };
@@ -415,6 +425,18 @@ tourSchema.pre('validate', function normalizeTour() {
         const key = `${item.type}::${item.url}`;
         return arr.findIndex((entry) => `${entry.type}::${entry.url}` === key) === index;
       }) as ITourDoc['media'];
+
+  if (Array.isArray(draft.media) && draft.media.length > 0) {
+    const imageMedia = draft.media.filter((item) => item.type === 'image');
+    if (imageMedia.length > 0) {
+      const explicitCover = imageMedia.find((item) => item.isCover === true);
+      const coverUrl = explicitCover?.url ?? imageMedia[0]?.url;
+      draft.media = draft.media.map((item) => ({
+        ...item,
+        isCover: item.type === 'image' ? item.url === coverUrl : false,
+      })) as ITourDoc['media'];
+    }
+  }
 
   if ((!draft.gallery || draft.gallery.length === 0) && Array.isArray(draft.media))
     draft.gallery = draft.media.filter((item) => item.type === 'image').map((item) => item.url);
@@ -427,7 +449,7 @@ tourSchema.pre('validate', function normalizeTour() {
 
   if ((!draft.media || draft.media.length === 0) && ((draft.gallery && draft.gallery.length > 0) || draft.videoUrl)) {
     const nextMedia = [
-      ...(draft.gallery ?? []).map((url) => ({ url, type: 'image' as const })),
+      ...(draft.gallery ?? []).map((url, index) => ({ url, type: 'image' as const, isCover: index === 0 })),
       ...(draft.videoUrl ? [{ url: draft.videoUrl, type: 'video' as const }] : []),
     ];
     draft.media = nextMedia;

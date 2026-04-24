@@ -137,8 +137,23 @@ const media = Joi.object({
   alt_text: Joi.string().allow('', null),
   title: Joi.string().allow('', null),
   text: Joi.string().allow('', null),
+  isCover: Joi.boolean().optional(),
+  cover: Joi.boolean().optional(),
+  is_cover: Joi.boolean().optional(),
 }).custom((value, helpers) => {
   if (!value.url && !value.file) return helpers.message({ custom: '"media.url" is required' });
+
+  const resolvedCover =
+    typeof value.isCover === 'boolean'
+      ? value.isCover
+      : typeof value.cover === 'boolean'
+        ? value.cover
+        : typeof value.is_cover === 'boolean'
+          ? value.is_cover
+          : undefined;
+  if (typeof resolvedCover === 'boolean') value.isCover = resolvedCover;
+  delete value.cover;
+  delete value.is_cover;
 
   return value;
 });
