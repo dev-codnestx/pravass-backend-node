@@ -5,12 +5,78 @@ import Joi from 'joi';
 import { TOUR_CATEGORY } from '@/shared/constants/enum.constant.js';
 import { objectId } from '@/shared/validations/custom.validation.js';
 
-import { batchStatuses, tourDifficulties, tourMediaTypes, tourStatuses } from './tour.interfaces.js';
+import {
+  departureFlightTypes,
+  departureTransportModes,
+  departureTypes,
+  seatStatuses,
+  tourDifficulties,
+  tourMediaTypes,
+  tourStatuses,
+} from './tour.interfaces.js';
 
-const batch = Joi.object({
+const joiningLeavingPoint = Joi.object({
+  name: Joi.string().trim().required(),
+  time: Joi.string().allow('', null),
+});
+
+const departureCityItem = Joi.object({
+  city: Joi.string().trim().required(),
+  joiningPoints: Joi.array().items(joiningLeavingPoint).optional(),
+  leavingPoints: Joi.array().items(joiningLeavingPoint).optional(),
+});
+
+const flightOption = Joi.object({
   id: Joi.string().allow('', null),
-  date: Joi.date().allow('', null),
-  status: Joi.string().valid(...batchStatuses),
+  airlineName: Joi.string().allow('', null),
+  flightNumber: Joi.string().allow('', null),
+  from: Joi.string().allow('', null),
+  to: Joi.string().allow('', null),
+  departureTime: Joi.string().allow('', null),
+  arrivalTime: Joi.string().allow('', null),
+  duration: Joi.string().allow('', null),
+  type: Joi.string()
+    .valid(...departureFlightTypes)
+    .allow('', null),
+  seats: Joi.number().min(0).allow(null),
+  totalSeats: Joi.number().min(0).allow(null),
+});
+
+const seatState = Joi.object({
+  seat_no: Joi.string().trim().required(),
+  status: Joi.string()
+    .valid(...seatStatuses)
+    .default('available'),
+  row: Joi.number().allow(null),
+  column: Joi.number().allow(null),
+});
+
+const departure = Joi.object({
+  id: Joi.string().allow('', null),
+  cityId: Joi.string().allow('', null),
+  cityIds: Joi.array().items(Joi.string()).optional(),
+  startDate: Joi.date().allow('', null),
+  endDate: Joi.date().allow('', null),
+  transportMode: Joi.string()
+    .valid(...departureTransportModes)
+    .allow('', null),
+  transportTypeId: Joi.string().allow('', null),
+  transportId: Joi.string().allow('', null),
+  transport_id: Joi.string().allow('', null),
+  vehicleId: Joi.string().allow('', null),
+  seats: Joi.number().min(0).allow(null),
+  price: Joi.number().min(0).allow(null),
+  joiningLeavingAllowed: Joi.boolean().allow(null),
+  departureCities: Joi.array().items(departureCityItem).optional(),
+  joiningPoints: Joi.array().items(Joi.string()).optional(),
+  leavingPoints: Joi.array().items(Joi.string()).optional(),
+  totalSeatsAvailable: Joi.number().min(0).allow(null),
+  airlineName: Joi.string().allow('', null),
+  flightNumber: Joi.string().allow('', null),
+  flightOptions: Joi.array().items(flightOption).optional(),
+  trainName: Joi.string().allow('', null),
+  trainNumber: Joi.string().allow('', null),
+  seatStates: Joi.array().items(seatState).optional(),
 });
 
 const pricingPolicy = Joi.object({
@@ -71,8 +137,23 @@ const media = Joi.object({
   alt_text: Joi.string().allow('', null),
   title: Joi.string().allow('', null),
   text: Joi.string().allow('', null),
+  isCover: Joi.boolean().optional(),
+  cover: Joi.boolean().optional(),
+  is_cover: Joi.boolean().optional(),
 }).custom((value, helpers) => {
   if (!value.url && !value.file) return helpers.message({ custom: '"media.url" is required' });
+
+  const resolvedCover =
+    typeof value.isCover === 'boolean'
+      ? value.isCover
+      : typeof value.cover === 'boolean'
+        ? value.cover
+        : typeof value.is_cover === 'boolean'
+          ? value.is_cover
+          : undefined;
+  if (typeof resolvedCover === 'boolean') value.isCover = resolvedCover;
+  delete value.cover;
+  delete value.is_cover;
 
   return value;
 });
@@ -92,6 +173,7 @@ const settings = Joi.object({
 
 const tourBody = {
   name: Joi.string().trim().required(),
+  slug: Joi.string().trim().lowercase().allow('', null),
   code: Joi.string().trim().allow('', null),
   destination: Joi.string().trim().allow('', null),
   destinationIds: Joi.array().items(Joi.string().trim().custom(objectId)).default([]),
@@ -114,7 +196,10 @@ const tourBody = {
   manager: Joi.string().allow('', null),
   managerMobile: Joi.string().allow('', null),
   departureCities: Joi.array().items(Joi.string()),
-  batches: Joi.array().items(batch),
+  departureType: Joi.string()
+    .valid(...departureTypes)
+    .allow('', null),
+  departures: Joi.array().items(departure),
   pricingPolicy,
   basePricing,
   seasonalPricing: Joi.array().items(seasonalPricing),
@@ -149,8 +234,16 @@ const tourBody = {
   cancellationPolicy: Joi.string().allow('', null),
   terms: Joi.string().allow('', null),
   termsAndConditions: Joi.string().allow('', null),
+  highlights: Joi.array().items(Joi.string()),
   policies,
   settings,
+  batches: Joi.array().items(
+    Joi.object({
+      id: Joi.string().allow('', null),
+      date: Joi.date().required(),
+      status: Joi.string().allow('', null),
+    }),
+  ),
 };
 
 const createTour = {
@@ -173,6 +266,7 @@ const getTours = {
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
     search: Joi.string(),
+    destinationIds: Joi.alternatives().try(Joi.array().items(Joi.string().trim().custom(objectId)), Joi.string().trim()),
     populate: Joi.string(),
     fields: Joi.string(),
     includeTimeStamps: Joi.boolean(),

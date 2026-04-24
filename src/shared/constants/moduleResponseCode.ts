@@ -73,6 +73,12 @@ const entitiesAndCustomCodes: EntityDefinition[] = [
   {
     name: 'Banner',
   },
+  {
+    name: 'Lead',
+  },
+  {
+    name: 'Customer',
+  },
 ];
 
 export const generateEntitiesWithKeys = (entities: EntityDefinition[]): EntityWithKey[] => {

@@ -11,11 +11,11 @@ const router: Router = express.Router();
 router
   .route('/')
   .post(authMiddleware('manageFaqs'), validateMiddleware(faqValidation.createFaq), faqController.createFaq)
-  .get(authMiddleware('getFaqs'), validateMiddleware(faqValidation.getFaqs), faqController.getFaqs);
+  .get(validateMiddleware(faqValidation.getFaqs), faqController.getFaqs);
 
 router
   .route('/:faqId')
-  .get(authMiddleware('getFaqs'), validateMiddleware(faqValidation.getFaq), faqController.getFaq)
+  .get(validateMiddleware(faqValidation.getFaq), faqController.getFaq)
   .patch(authMiddleware('manageFaqs'), validateMiddleware(faqValidation.updateFaq), faqController.updateFaq)
   .delete(authMiddleware('manageFaqs'), validateMiddleware(faqValidation.deleteFaq), faqController.deleteFaq);
 

@@ -5,7 +5,7 @@ import { objectId } from '@/shared/validations/custom.validation.js';
 
 export const createBlog = {
   body: Joi.object().keys({
-    featuredImage: Joi.string().allow('').optional(),
+    featuredImage: Joi.string().required(),
     title: Joi.string().required().trim().min(3).max(200),
     category: Joi.string()
       .required()

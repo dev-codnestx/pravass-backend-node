@@ -3,6 +3,7 @@ import { model, Schema, type Document, type Model } from 'mongoose';
 import { applyMasterBasePlugin, type MasterStatus } from '@/modules/masters/common/masterBase.plugin.js';
 import { type MasterModuleKey } from '@/modules/masters/common/master.constants.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
+import { TOUR_CATEGORY } from '@/shared/constants/enum.constant.js';
 
 export interface IMasterDoc extends Document {
   name: string;
@@ -41,7 +42,9 @@ const locationSchema = createMasterSchema({
 
 const destinationSchema = createMasterSchema({
   description: { type: String, trim: true },
-  image: { type: String, trim: true },
+  image: [{ type: String, trim: true }],
+  category: { type: String, trim: true, enum: TOUR_CATEGORY, default: TOUR_CATEGORY.DOMESTIC },
+  activityIds: [{ type: Schema.Types.ObjectId, ref: 'MasterActivity' }],
 });
 
 const departureCitySchema = createMasterSchema({
@@ -51,6 +54,9 @@ const departureCitySchema = createMasterSchema({
   country: { type: String, trim: true },
   state: { type: String, trim: true },
   city: { type: String, trim: true },
+  image: { type: String, trim: true },
+  description: { type: String, trim: true },
+  category: { type: String, trim: true, enum: TOUR_CATEGORY, default: TOUR_CATEGORY.DOMESTIC },
 });
 
 const hotelSchema = createMasterSchema({
@@ -94,6 +100,11 @@ const leadSourceSchema = createMasterSchema({
   description: { type: String, trim: true },
 });
 
+const leadStageSchema = createMasterSchema({
+  color: { type: String, trim: true },
+  position: { type: Number, min: 1 },
+});
+
 const transportTypeSchema = createMasterSchema({
   capacity: { type: Number, min: 0 },
   description: { type: String, trim: true },
@@ -129,7 +140,6 @@ const tourTypeSchema = createMasterSchema({
 });
 
 const activitySchema = createMasterSchema({
-  destinationId: { type: Schema.Types.ObjectId, ref: 'MasterDestination' },
   description: { type: String, trim: true },
   image: { type: String, trim: true },
 });
@@ -146,6 +156,7 @@ export const masterModels: Record<MasterModuleKey, Model<IMasterDoc>> = {
   'payment-plans': model<IMasterDoc>('MasterPaymentPlan', paymentPlanSchema),
   'refund-policies': model<IMasterDoc>('MasterRefundPolicy', refundPolicySchema),
   'lead-sources': model<IMasterDoc>('MasterLeadSource', leadSourceSchema),
+  'lead-stages': model<IMasterDoc>('MasterLeadStage', leadStageSchema),
   'transport-types': model<IMasterDoc>('MasterTransportType', transportTypeSchema),
   transports: model<IMasterDoc>('MasterTransport', transportSchema),
   vehicles: model<IMasterDoc>('MasterVehicle', vehicleSchema),
