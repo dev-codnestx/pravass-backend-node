@@ -19,7 +19,7 @@ const authMiddleware =
   (...requiredRights: string[]) =>
   (req: Request, res: Response, next: NextFunction) => {
     // Bypass authentication for website client type
-    if (req.headers['client-type'] === 'website') return next();
+    if (req.headers['x-client-type'] === 'website') return next();
 
     new Promise<void>((resolve, reject) => {
       passport.authenticate('jwt', { session: false }, verifyCallback(req, resolve, reject, requiredRights))(req, res, next);
