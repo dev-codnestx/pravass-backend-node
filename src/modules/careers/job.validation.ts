@@ -26,6 +26,8 @@ const getJobs = {
   query: Joi.object().keys({
     title: Joi.string(),
     department: Joi.string(),
+    location: Joi.string(),
+    employmentType: Joi.string(),
     status: Joi.string(),
     sortBy: Joi.string(),
     limit: Joi.number().integer(),

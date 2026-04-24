@@ -15,8 +15,14 @@ const createJob = catchAsync(async (req: Request, res: Response) => {
 });
 
 const getJobs = catchAsync(async (req: Request, res: Response) => {
-  const filter = pick(req.query, ['title', 'department', 'status', 'isDeleted']);
+  const filter = pick(req.query, ['title', 'department', 'status', 'isDeleted', 'location', 'employmentType']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate', 'fields', 'includeTimeStamps']);
+
+  // Handle multi-select filters (comma-separated strings)
+  ['department', 'location', 'employmentType'].forEach((key) => {
+    if (filter[key] && typeof filter[key] === 'string' && filter[key].includes(','))
+      filter[key] = { $in: filter[key].split(',').map((s: string) => s.trim()) };
+  });
 
   if (req.query.search) filter.title = { $regex: req.query.search, $options: 'i' };
 

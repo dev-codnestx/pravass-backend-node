@@ -5,7 +5,7 @@ import { objectId } from '@/shared/validations/custom.validation.js';
 
 export const createBlog = {
   body: Joi.object().keys({
-    featuredImage: Joi.string().uri().allow('').optional(),
+    featuredImage: Joi.string().allow('').optional(),
     title: Joi.string().required().trim().min(3).max(200),
     category: Joi.string()
       .required()
@@ -47,7 +47,7 @@ export const updateBlog = {
   }),
   body: Joi.object()
     .keys({
-      featuredImage: Joi.string().uri().allow('').optional(),
+      featuredImage: Joi.string().allow('').optional(),
       title: Joi.string().trim().min(3).max(200).optional(),
       category: Joi.string()
         .valid(...blogCategories)
