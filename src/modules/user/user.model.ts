@@ -19,6 +19,7 @@ const userSchema = new Schema<IUser>(
     firstName: { type: String, trim: true },
     lastName: { type: String, trim: true },
     birthdate: { type: String, trim: true },
+    address: { type: String, trim: true },
     email: {
       type: String,
       lowercase: true,
@@ -44,6 +45,16 @@ const userSchema = new Schema<IUser>(
     twoFactorEnabled: { type: Boolean, default: false },
     refreshTokenVersion: { type: Number, default: 0 },
     profileImage: { type: String },
+    providers: [
+      {
+        name: {
+          type: String,
+        },
+        providerId: {
+          type: String,
+        },
+      },
+    ],
   },
   {
     timestamps: true,

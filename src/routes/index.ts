@@ -16,6 +16,8 @@ import supportRoute from '@/modules/support/support.route.js';
 import tourRoute from '@/modules/tours/tour.route.js';
 import specialityTourRoute from '@/modules/specialityTours/specialityTour.route.js';
 import dealRoute from '@/modules/deals/deal.route.js';
+import leadRoute from '@/modules/leads/lead.route.js';
+import customerRoute from '@/modules/customers/customer.route.js';
 
 const router = express.Router();
 
@@ -89,6 +91,14 @@ const setupRoutes = () => {
     {
       path: '/deals',
       route: dealRoute,
+    },
+    {
+      path: '/leads',
+      route: leadRoute,
+    },
+    {
+      path: '/customers',
+      route: customerRoute,
     },
   ];
 

@@ -8,6 +8,7 @@ export interface IUser extends Document {
   firstName?: string;
   lastName?: string;
   birthdate?: string;
+  address?: string;
   email: string;
   phoneNumber?: string;
   phone?: string;
@@ -35,6 +36,12 @@ export interface IUser extends Document {
   resetFailedAttempts(): Promise<void>;
   generateOTP(channel: 'email' | 'sms', purpose: string, OtpModel: any): Promise<string>;
   verifyOTP(channel: 'email' | 'sms', purpose: string, code: string, OtpModel: any): Promise<boolean>;
+  providers?: [
+    {
+      name: string;
+      providerId: string;
+    },
+  ];
 }
 
 export type IUserDoc = IUser;
@@ -57,6 +64,7 @@ export interface NewUserBody {
   first_name?: string;
   last_name?: string;
   birthdate?: string;
+  address?: string;
   fullName?: string;
   phone?: string;
   platform_source?: string;
@@ -67,6 +75,12 @@ export interface NewUserBody {
   mustChangePassword?: boolean;
   twoFactorEnabled?: boolean;
   refreshTokenVersion?: number;
+  providers?: [
+    {
+      name: string;
+      providerId: string;
+    },
+  ];
 }
 
 export interface UpdateUserBody {
@@ -81,6 +95,7 @@ export interface UpdateUserBody {
   first_name?: string;
   last_name?: string;
   birthdate?: string;
+  address?: string;
   fullName?: string;
   phone?: string;
   platform_source?: string;

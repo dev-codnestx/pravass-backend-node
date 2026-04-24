@@ -11,11 +11,11 @@ const router: Router = express.Router();
 router
   .route('/')
   .post(authMiddleware('manageBlogs'), validateMiddleware(blogValidation.createBlog), blogController.createBlog)
-  .get(authMiddleware('getBlogs'), validateMiddleware(blogValidation.getBlogs), blogController.getBlogs);
+  .get(validateMiddleware(blogValidation.getBlogs), blogController.getBlogs);
 
 router
   .route('/:blogId')
-  .get(authMiddleware('getBlogs'), validateMiddleware(blogValidation.getBlog), blogController.getBlog)
+  .get(validateMiddleware(blogValidation.getBlog), blogController.getBlog)
   .patch(authMiddleware('manageBlogs'), validateMiddleware(blogValidation.updateBlog), blogController.updateBlog)
   .delete(authMiddleware('manageBlogs'), validateMiddleware(blogValidation.deleteBlog), blogController.deleteBlog);
 
