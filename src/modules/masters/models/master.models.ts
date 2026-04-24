@@ -43,7 +43,7 @@ const locationSchema = createMasterSchema({
 const destinationSchema = createMasterSchema({
   description: { type: String, trim: true },
   image: { type: String, trim: true },
-  category: { type: String, enum: ['domestic', 'international'] },
+  category: { type: String, trim: true, enum: TOUR_CATEGORY, default: TOUR_CATEGORY.DOMESTIC },
 });
 
 const departureCitySchema = createMasterSchema({
