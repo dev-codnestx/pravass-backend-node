@@ -46,7 +46,7 @@ const submitApplication = {
     experience: Joi.string().allow('').optional().trim(),
     appliedJob: Joi.string().required(),
     coverLetter: Joi.string().allow('').optional(),
-    resume: Joi.string().uri().allow('').optional(),
+    resume: Joi.string().allow('').optional(),
   }),
 };
 
