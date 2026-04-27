@@ -120,6 +120,7 @@ export interface IItineraryDay {
 export interface ITourMedia {
   url: string;
   type: TourMediaType;
+  isCover?: boolean;
   alt_text?: string;
   title?: string;
   text?: string;
