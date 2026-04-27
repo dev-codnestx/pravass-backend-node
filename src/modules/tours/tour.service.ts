@@ -1,14 +1,13 @@
 /* eslint-disable camelcase */
 
 import httpStatus from 'http-status';
-import mongoose from 'mongoose';
+import mongoose, { Types } from 'mongoose';
 
 import { masterModels } from '@/modules/masters/models/master.models.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { cloneDocument } from '@/shared/utils/copy.command.js';
 import { getEntityByIdWithQueryString } from '@/shared/utils/modelPopulateFields.js';
 import { PaginateOptions, QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
-
 import { IDeparture, ITour, ITourDoc, ITourMedia, ITourPolicies, TourStatus } from './tour.interfaces.js';
 import TourModel from './tour.model.js';
 
@@ -484,9 +483,29 @@ const queryTours = async (filter: Record<string, unknown>, options: PaginateOpti
   const normalizedFilter = { ...filter };
 
   if (normalizedFilter.tourType) {
-    const resolvedTourType = await resolveTourTypeMeta(normalizedFilter.tourType);
-    if (resolvedTourType) normalizedFilter.tourType = resolvedTourType.id;
-    else normalizedFilter.tourType = '__NO_MATCH__';
+    const tourTypeVal = normalizedFilter.tourType;
+    if (typeof tourTypeVal === 'string') {
+      const typeNames = tourTypeVal
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+      const resolvedResults = await Promise.all(
+        typeNames.map(async (name) => {
+          if (Types.ObjectId.isValid(name)) return new Types.ObjectId(name);
+
+          const resolved = await resolveTourTypeMeta(name);
+          return resolved ? new Types.ObjectId(resolved.id) : null;
+        }),
+      );
+
+      const resolvedIds = resolvedResults.filter((id): id is Types.ObjectId => id !== null);
+
+      if (resolvedIds.length > 0) normalizedFilter.tourType = { $in: resolvedIds };
+      else
+        // If no valid IDs were resolved from the names, use a non-matching ID
+        normalizedFilter.tourType = new Types.ObjectId();
+    }
   }
 
   const limit = Math.min(Math.max(Number(options.limit ?? 10), 1), 100);

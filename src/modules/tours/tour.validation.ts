@@ -253,22 +253,27 @@ const createTour = {
 const getTours = {
   query: Joi.object().keys({
     name: Joi.string(),
-    destination: Joi.string(),
     status: Joi.string()
       .trim()
       .lowercase()
       .valid(...tourStatuses),
     tourType: Joi.string().trim(),
-    tourCategory: Joi.string(),
-    code: Joi.string(),
+    tourCategory: Joi.string().trim(),
+    tourScope: Joi.string().trim(),
+    code: Joi.string().trim(),
     difficulty: Joi.string().valid(...tourDifficulties),
-    sortBy: Joi.string(),
+    sortBy: Joi.string().trim(),
     limit: Joi.number().integer(),
     page: Joi.number().integer(),
-    search: Joi.string(),
+    search: Joi.string().trim(),
+    departureCity: Joi.string().trim(),
+    budget: Joi.string().trim(),
+    rating: Joi.number().allow(null),
+    duration: Joi.string().trim(),
+    destination: Joi.string().trim(),
     destinationIds: Joi.alternatives().try(Joi.array().items(Joi.string().trim().custom(objectId)), Joi.string().trim()),
-    populate: Joi.string(),
-    fields: Joi.string(),
+    populate: Joi.string().trim(),
+    fields: Joi.string().trim(),
     includeTimeStamps: Joi.boolean(),
   }),
 };
