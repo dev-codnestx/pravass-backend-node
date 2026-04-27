@@ -178,6 +178,8 @@ export interface ITour {
   videoUrl?: string;
   seoTitle?: string;
   seoDescription?: string;
+  ratings?: number;
+  reviews?: number;
   isDeleted?: boolean;
   createdBy?: Types.ObjectId;
   updatedBy?: Types.ObjectId;
