@@ -17,6 +17,7 @@ export const MASTER_MODULES = [
   'sharing-types',
   'tour-types',
   'activities',
+  'blog-categories',
 ] as const;
 
 export type MasterModuleKey = (typeof MASTER_MODULES)[number];
