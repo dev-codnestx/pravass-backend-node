@@ -163,4 +163,5 @@ export const masterModels: Record<MasterModuleKey, Model<IMasterDoc>> = {
   'sharing-types': model<IMasterDoc>('MasterSharingType', sharingTypeSchema),
   'tour-types': model<IMasterDoc>('MasterTourType', tourTypeSchema),
   activities: model<IMasterDoc>('MasterActivity', activitySchema),
+  'blog-categories': model<IMasterDoc>('MasterBlogCategory', createMasterSchema()),
 };
