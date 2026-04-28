@@ -35,6 +35,8 @@ const hasRequiredRights = (user: IUserDoc, requiredRights: string[]): boolean =>
   if (!requiredRights.length) return true;
 
   const role = resolveRole(user);
+  if (role?.code === 'SUPER_ADMIN') return true;
+
   const permissions = Array.isArray(role?.permissions) ? role.permissions : [];
 
   return requiredRights.every((right) => {

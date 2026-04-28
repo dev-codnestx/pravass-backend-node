@@ -21,7 +21,10 @@ const jwtStrategy = new JwtStrategy(
     try {
       if (payload.type !== tokenTypes.ACCESS) throw new Error('Invalid token type');
 
-      const user = await User.findById(payload.sub);
+      const user = await User.findById(payload.sub).populate({
+        path: 'roleId',
+        select: 'name code description permissions isSystem status',
+      });
       if (!user) return done(null, false);
 
       done(null, user);
