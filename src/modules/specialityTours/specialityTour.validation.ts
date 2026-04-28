@@ -66,6 +66,12 @@ const duplicateSpecialityTour = {
   }),
 };
 
+const getSpecialityTourBySlug = {
+  params: Joi.object().keys({
+    slug: Joi.string().required(),
+  }),
+};
+
 export const specialityTourValidation = {
   createSpecialityTour,
   getSpecialityTours,
@@ -73,4 +79,5 @@ export const specialityTourValidation = {
   updateSpecialityTour,
   deleteSpecialityTour,
   duplicateSpecialityTour,
+  getSpecialityTourBySlug,
 };
