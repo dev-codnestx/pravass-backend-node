@@ -10,7 +10,6 @@ import { applicationValidation } from './application.validation.js';
 
 const router = express.Router();
 
-// Admin routes (protected)
 router
   .route('/')
   .get(authMiddleware(), validateMiddleware(applicationValidation.getApplications), applicationController.getApplications);
@@ -30,9 +29,13 @@ router
     applicationController.deleteApplication,
   );
 
-// Public route (no auth required — website form submission)
+// Protected routes (auth required)
 router
-  .route('/public/submit')
-  .post(validateMiddleware(applicationValidation.submitApplication), applicationController.createApplication);
+  .route('/submit')
+  .post(
+    authMiddleware(),
+    validateMiddleware(applicationValidation.submitApplication),
+    applicationController.createApplication,
+  );
 
 export default router;

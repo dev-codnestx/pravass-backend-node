@@ -13,11 +13,11 @@ router
     validateMiddleware(testimonialValidation.createTestimonial),
     testimonialController.createTestimonial,
   )
-  .get(authMiddleware(), validateMiddleware(testimonialValidation.getTestimonials), testimonialController.getTestimonials);
+  .get(validateMiddleware(testimonialValidation.getTestimonials), testimonialController.getTestimonials);
 
 router
   .route('/:testimonialId')
-  .get(authMiddleware(), validateMiddleware(testimonialValidation.getTestimonial), testimonialController.getTestimonial)
+  .get(validateMiddleware(testimonialValidation.getTestimonial), testimonialController.getTestimonial)
   .patch(
     authMiddleware(),
     setAuditFields,

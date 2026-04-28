@@ -236,6 +236,8 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     videoUrl: { type: String, trim: true },
     seoTitle: { type: String, trim: true },
     seoDescription: { type: String, trim: true },
+    ratings: { type: Number, default: 0, min: 0, max: 5 },
+    reviews: { type: Number, default: 0, min: 0 },
     isDeleted: { type: Boolean, default: false, index: true },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },

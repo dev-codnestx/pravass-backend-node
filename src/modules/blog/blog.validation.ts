@@ -47,7 +47,7 @@ export const updateBlog = {
   }),
   body: Joi.object()
     .keys({
-      featuredImage: Joi.string().uri().allow('').optional(),
+      featuredImage: Joi.string().allow('').optional(),
       title: Joi.string().trim().min(3).max(200).optional(),
       category: Joi.string()
         .valid(...blogCategories)

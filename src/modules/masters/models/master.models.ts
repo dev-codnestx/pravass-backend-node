@@ -45,6 +45,12 @@ const destinationSchema = createMasterSchema({
   image: [{ type: String, trim: true }],
   category: { type: String, trim: true, enum: TOUR_CATEGORY, default: TOUR_CATEGORY.DOMESTIC },
   activityIds: [{ type: Schema.Types.ObjectId, ref: 'MasterActivity' }],
+  countryId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  stateId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  cityId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  country: { type: String, trim: true },
+  state: { type: String, trim: true },
+  city: { type: String, trim: true },
 });
 
 const departureCitySchema = createMasterSchema({
@@ -63,6 +69,7 @@ const hotelSchema = createMasterSchema({
   destinationId: { type: Schema.Types.ObjectId, ref: 'MasterDestination' },
   address: { type: String, trim: true },
   description: { type: String, trim: true },
+  image: [{ type: String, trim: true }],
 });
 
 const roomTypeSchema = createMasterSchema({
@@ -163,4 +170,5 @@ export const masterModels: Record<MasterModuleKey, Model<IMasterDoc>> = {
   'sharing-types': model<IMasterDoc>('MasterSharingType', sharingTypeSchema),
   'tour-types': model<IMasterDoc>('MasterTourType', tourTypeSchema),
   activities: model<IMasterDoc>('MasterActivity', activitySchema),
+  'blog-categories': model<IMasterDoc>('MasterBlogCategory', createMasterSchema()),
 };
