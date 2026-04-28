@@ -1,45 +1,86 @@
 import { Request, Response, NextFunction } from 'express';
-import passport from 'passport';
 import httpStatus from 'http-status';
+import passport from 'passport';
 
 import { IUserDoc } from '@/modules/user/user.interfaces.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
-import { CLIENT_TYPE_HEADER, DEFAULT_CLIENT_TYPE } from '@/modules/auth/auth.constants.js';
 
-type AuthMiddlewareOptions = {
-  allowedClientTypes?: readonly string[];
+type AuthOptions = {
+  allowGuestFor?: string[];
+  allowedClientTypes?: string[];
 };
 
-const isAuthOptions = (value: unknown): value is AuthMiddlewareOptions =>
-  typeof value === 'object' && value !== null && !Array.isArray(value);
+type RolePermission = {
+  module?: string;
+  actions?: string[];
+};
+
+type RoleLike = {
+  code?: string;
+  permissions?: RolePermission[];
+};
+
+const getClientType = (req: Request): string => (req.headers['x-client-type'] as string) || '';
+
+const resolveRole = (user: IUserDoc): RoleLike | null => {
+  const anyUser = user as IUserDoc & { role?: RoleLike; roleId?: RoleLike | string };
+
+  if (anyUser?.role && typeof anyUser.role === 'object') return anyUser.role;
+  if (anyUser?.roleId && typeof anyUser.roleId === 'object') return anyUser.roleId;
+
+  return null;
+};
+
+const hasRequiredRights = (user: IUserDoc, requiredRights: string[]): boolean => {
+  if (!requiredRights.length) return true;
+
+  const role = resolveRole(user);
+  const permissions = Array.isArray(role?.permissions) ? role.permissions : [];
+
+  return requiredRights.every((right) => {
+    const [module, action] = right.split(':');
+    if (!module || !action) return false;
+
+    return permissions.some(
+      (perm) => perm.module === module && Array.isArray(perm.actions) && perm.actions.includes(action),
+    );
+  });
+};
+
+const extractOptionsAndRights = (args: Array<AuthOptions | string>): { options?: AuthOptions; requiredRights: string[] } => {
+  if (!args.length) return { requiredRights: [] };
+
+  const [firstArg, ...rest] = args;
+
+  if (typeof firstArg === 'string') return { requiredRights: [firstArg, ...(rest as string[])] };
+
+  return { options: firstArg, requiredRights: rest as string[] };
+};
 
 const authMiddleware =
-  (...args: (string | AuthMiddlewareOptions)[]) =>
+  (...args: Array<AuthOptions | string>) =>
   (req: Request, res: Response, next: NextFunction) => {
-    const [options, requiredRights] = isAuthOptions(args[0]) ? [args[0], args.slice(1) as string[]] : [{}, args as string[]];
-    console.log('🚀 ~ authMiddleware ~ requiredRights:', requiredRights);
+    const { options, requiredRights } = extractOptionsAndRights(args);
 
-    // Handle undefined options safely
-    const allowedClientTypes = new Set(
-      (options?.allowedClientTypes || []).map((c) => c.toLowerCase().trim()).filter(Boolean),
-    );
+    const clientType = getClientType(req);
+    const allowGuestTypes = options?.allowGuestFor ?? [];
+    const allowGuest = allowGuestTypes.includes(clientType);
 
-    const clientType = req.get(CLIENT_TYPE_HEADER)?.toLowerCase().trim() || DEFAULT_CLIENT_TYPE;
+    passport.authenticate('jwt', { session: false }, (err: Error | null, user: IUserDoc | null, info: unknown) => {
+      if (!allowGuest) {
+        if (err || info || !user) return next(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
 
-    // Only skip auth IF allowedClientTypes is provided AND matches
-    if (options?.allowedClientTypes?.length && allowedClientTypes.has(clientType)) return next();
+        if (!hasRequiredRights(user, requiredRights)) return next(new ApiError(httpStatus.FORBIDDEN, 'Forbidden'));
 
-    // Otherwise → normal auth flow (no breaking)
-    passport.authenticate('jwt', { session: false }, (err: Error | null, user: IUserDoc | null, info: any) => {
-      if (err || info || !user) return next(new ApiError(httpStatus.UNAUTHORIZED, 'Please authenticate'));
+        req.user = user;
+        return next();
+      }
 
-      req.user = user;
+      if (user) {
+        req.user = user;
 
-      // Optional RBAC hook. Keeping parity with previous behavior:
-      // requiredRights are accepted in middleware signature but not enforced here.
-      // if (!hasPermissions(user, requiredRights)) {
-      //   return next(new ApiError(httpStatus.FORBIDDEN, "Forbidden"));
-      // }
+        if (!hasRequiredRights(user, requiredRights)) return next(new ApiError(httpStatus.FORBIDDEN, 'Forbidden'));
+      }
 
       return next();
     })(req, res, next);
