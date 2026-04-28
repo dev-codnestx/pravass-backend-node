@@ -51,6 +51,26 @@ const uniqueStrings = (values: unknown[]): string[] => {
 const toObjectIdStrings = (values: unknown[]): string[] =>
   uniqueStrings(values).filter((value) => mongoose.Types.ObjectId.isValid(value));
 
+const resolveActivityIdsFromDestinations = async (destinationIds: string[]): Promise<string[]> => {
+  if (!destinationIds.length) return [];
+
+  const destinations = await masterModels.destinations
+    .find({ _id: { $in: destinationIds } })
+    .select('activityIds')
+    .lean();
+
+  const activityIdSet = new Set<string>();
+  destinations.forEach((destination) => {
+    const activityIds = Array.isArray(destination.activityIds) ? destination.activityIds : [];
+    activityIds.forEach((activityId) => {
+      const normalizedId = toTrimmedString(String(activityId));
+      if (normalizedId && mongoose.Types.ObjectId.isValid(normalizedId)) activityIdSet.add(normalizedId);
+    });
+  });
+
+  return Array.from(activityIdSet);
+};
+
 const resolveTourTypeMeta = async (value: unknown): Promise<{ id: string; name?: string } | undefined> => {
   const normalized = toTrimmedString(value);
   if (!normalized) return undefined;
@@ -300,11 +320,16 @@ const applyPolicyAliases = (payload: Record<string, unknown>) => {
     ...toPolicyArray(payload.terms),
     ...toPolicyArray(payload.termsAndConditions),
   ];
+  const refundPolicyId =
+    toTrimmedString(policies.refundPolicyId) ??
+    toTrimmedString(policies.refundPolicy) ??
+    toTrimmedString(payload.refundPolicy);
 
   const normalizedPolicies: ITourPolicies = {
     payment: [...new Set(payment)],
     cancellation: [...new Set(cancellation)],
     termsAndConditions: [...new Set(termsAndConditions)],
+    refundPolicyId,
   };
 
   payload.policies = normalizedPolicies;
@@ -317,6 +342,8 @@ const applyPolicyAliases = (payload: Record<string, unknown>) => {
 
   if (!payload.terms && normalizedPolicies.termsAndConditions && normalizedPolicies.termsAndConditions.length > 0)
     payload.terms = normalizedPolicies.termsAndConditions.join('\n');
+
+  if (!payload.refundPolicy && normalizedPolicies.refundPolicyId) payload.refundPolicy = normalizedPolicies.refundPolicyId;
 };
 
 const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<ITour>> => {
@@ -337,8 +364,17 @@ const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<I
   ];
   if (activityIds.length > 0) mutableBody.activityIds = [...new Set(activityIds)];
 
-  const destinationIds = Array.isArray(mutableBody.destinationIds) ? toObjectIdStrings(mutableBody.destinationIds) : [];
-  if (destinationIds.length > 0) mutableBody.destinationIds = destinationIds;
+  const hasDestinationIdsInPayload = Array.isArray(mutableBody.destinationIds);
+  const destinationIds = hasDestinationIdsInPayload ? toObjectIdStrings(mutableBody.destinationIds as unknown[]) : [];
+  if (hasDestinationIdsInPayload) mutableBody.destinationIds = destinationIds;
+
+  const hasExplicitActivityIds =
+    Array.isArray(mutableBody.activityIds) || (Array.isArray(mutableBody.activities) && mutableBody.activities.length > 0);
+  if (hasDestinationIdsInPayload && !hasExplicitActivityIds) {
+    const mappedActivityIds = await resolveActivityIdsFromDestinations(destinationIds);
+    // eslint-disable-next-line require-atomic-updates
+    mutableBody.activityIds = mappedActivityIds;
+  }
 
   const resolvedTourType = await resolveTourTypeMeta(mutableBody.tourType);
   // eslint-disable-next-line require-atomic-updates
@@ -370,8 +406,8 @@ const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<I
   } else if (Array.isArray(mutableBody.batches) && mutableBody.batches.length > 0) {
     // Map batches to departures if no explicit departures are provided
     mutableBody.departures = normalizeDepartures(
-      mutableBody.batches.map((batch: any) => ({
-        id: batch.id,
+      mutableBody.batches.map((batch: Record<string, unknown>) => ({
+        id: toTrimmedString(batch.id),
         startDate: batch.date,
         transportMode: mutableBody.transportType || 'BUS', // Fallback to BUS
         vehicleId: mutableBody.vehicleId,
