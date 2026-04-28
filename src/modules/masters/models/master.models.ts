@@ -97,6 +97,7 @@ const paymentPlanSchema = createMasterSchema({
 });
 
 const refundPolicySchema = createMasterSchema({
+  description: { type: String, trim: true },
   daysBefore: { type: String, trim: true },
   refundPercent: { type: String, trim: true },
   noShow: { type: String, trim: true },

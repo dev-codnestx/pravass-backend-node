@@ -130,6 +130,7 @@ export interface ITourPolicies {
   payment?: string[];
   cancellation?: string[];
   termsAndConditions?: string[];
+  refundPolicyId?: string;
 }
 
 export interface ITourSettings {
