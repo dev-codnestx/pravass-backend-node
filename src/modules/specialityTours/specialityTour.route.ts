@@ -7,7 +7,11 @@ import { specialityTourController } from './specialityTour.controller.js';
 import { specialityTourValidation } from './specialityTour.validation.js';
 
 const router = express.Router();
-
+router.get(
+  '/slug/:slug',
+  validateMiddleware(specialityTourValidation.getSpecialityTourBySlug),
+  specialityTourController.getSpecialityTourBySlug,
+);
 router
   .route('/')
   .post(
