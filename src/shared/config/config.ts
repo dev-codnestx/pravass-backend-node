@@ -47,6 +47,8 @@ const envVarsSchema = Joi.object()
     ADMIN_FRONTEND_URL: Joi.string().required().description('Admin Client url'),
     GOOGLE_CLIENT_ID: Joi.string().description('Google Client ID is missing'),
     GOOGLE_CLIENT_SECRET: Joi.string().description('Google Client Secret is missing'),
+    AVIATIONSTACK_API_KEY: Joi.string().allow('').optional().description('AviationStack API key'),
+    AVIATIONSTACK_BASE_URL: Joi.string().allow('').optional().description('AviationStack base URL'),
   })
   .unknown();
 
@@ -108,6 +110,10 @@ const config = {
   google: {
     clientId: envVars.GOOGLE_CLIENT_ID,
     clientSecret: envVars.GOOGLE_CLIENT_SECRET,
+  },
+  aviationstack: {
+    apiKey: envVars.AVIATIONSTACK_API_KEY,
+    baseUrl: envVars.AVIATIONSTACK_BASE_URL || 'http://api.aviationstack.com/v1/flights',
   },
 };
 

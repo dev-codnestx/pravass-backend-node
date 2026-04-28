@@ -18,6 +18,14 @@ const getTours = catchAsync(async (req: Request, res: Response) => {
   return res.success(result, 200, 'Tours fetched successfully');
 });
 
+const searchFlights = catchAsync(async (req: Request, res: Response) => {
+  const airline = String(req.query.airline ?? '')
+    .trim()
+    .toUpperCase();
+  const data = await tourService.searchFlightsByAirline(airline);
+  return res.success(data, 200, 'Flights fetched successfully');
+});
+
 const getTour = catchAsync(async (req: Request, res: Response) => {
   const options = pick(req.query, ['populate', 'fields']);
   const tour = await tourService.getTourById(req.params.tourId, options);
@@ -43,6 +51,7 @@ const duplicateTour = catchAsync(async (req: Request, res: Response) => {
 export const tourController = {
   createTour,
   getTours,
+  searchFlights,
   getTour,
   updateTour,
   deleteTour,
