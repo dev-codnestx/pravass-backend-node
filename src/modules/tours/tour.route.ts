@@ -20,6 +20,8 @@ router
   )
   .get(validateMiddleware(tourValidation.getTours), tourController.getTours);
 
+router.get('/flights/search', validateMiddleware(tourValidation.searchFlights), tourController.searchFlights);
+
 router
   .route('/:tourId')
   .get(validateMiddleware(tourValidation.getTour), tourController.getTour)

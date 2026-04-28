@@ -2,8 +2,10 @@
 
 import httpStatus from 'http-status';
 import mongoose, { Types } from 'mongoose';
+import axios from 'axios';
 
 import { masterModels } from '@/modules/masters/models/master.models.js';
+import config from '@/shared/config/config.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { cloneDocument } from '@/shared/utils/copy.command.js';
 import { getEntityByIdWithQueryString } from '@/shared/utils/modelPopulateFields.js';
@@ -558,6 +560,75 @@ const queryTours = async (filter: Record<string, unknown>, options: PaginateOpti
   );
 };
 
+type FlightLookupSuggestion = {
+  flightNumber: string;
+  from: string;
+  to: string;
+  departureTime: string;
+  arrivalTime: string;
+  stops: number;
+};
+
+const toTimeValue = (value: unknown): string => {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(11, 16);
+};
+
+const searchFlightsByAirline = async (airline: string): Promise<FlightLookupSuggestion[]> => {
+  const normalizedAirline = airline.trim().toUpperCase();
+  if (!normalizedAirline) return [];
+
+  const apiKey = config.aviationstack.apiKey;
+  if (!apiKey) return [];
+
+  const { data } = await axios.get(config.aviationstack.baseUrl, {
+    params: {
+      access_key: apiKey,
+      airline_iata: normalizedAirline,
+    },
+    timeout: 15000,
+  });
+
+  const rows = Array.isArray(data?.data) ? data.data : [];
+  const suggestions: FlightLookupSuggestion[] = [];
+  const seen = new Set<string>();
+
+  rows.forEach((flight: Record<string, unknown>) => {
+    const flightNode = (flight.flight as Record<string, unknown>) || {};
+    const departureNode = (flight.departure as Record<string, unknown>) || {};
+    const arrivalNode = (flight.arrival as Record<string, unknown>) || {};
+
+    const flightNumber = String(flightNode.iata ?? flightNode.number ?? '')
+      .trim()
+      .toUpperCase();
+    const from = String(departureNode.iata ?? '')
+      .trim()
+      .toUpperCase();
+    const to = String(arrivalNode.iata ?? '')
+      .trim()
+      .toUpperCase();
+    if (!flightNumber || !from || !to) return;
+
+    const key = `${flightNumber}-${from}-${to}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const stops = Math.max(0, Number(flightNode.number_of_stops ?? 0));
+    suggestions.push({
+      flightNumber,
+      from,
+      to,
+      departureTime: toTimeValue(departureNode.scheduled),
+      arrivalTime: toTimeValue(arrivalNode.scheduled),
+      stops: Number.isFinite(stops) ? stops : 0,
+    });
+  });
+
+  return suggestions;
+};
+
 const getTourById = async (id: string, options?: { populate?: string; fields?: string }): Promise<ITourDoc | null> => {
   if (options && (options.populate || options.fields))
     try {
@@ -623,6 +694,7 @@ const duplicateTourById = async (tourId: string): Promise<ITourDoc> => {
 export const tourService = {
   createTour,
   queryTours,
+  searchFlightsByAirline,
   getTourById,
   updateTourById,
   deleteTourById,

@@ -280,6 +280,12 @@ const getTours = {
   }),
 };
 
+const searchFlights = {
+  query: Joi.object().keys({
+    airline: Joi.string().trim().required(),
+  }),
+};
+
 const getTour = {
   params: Joi.object().keys({
     tourId: Joi.string().required().custom(objectId),
@@ -311,6 +317,7 @@ const duplicateTour = {
 export const tourValidation = {
   createTour,
   getTours,
+  searchFlights,
   getTour,
   updateTour,
   deleteTour,
