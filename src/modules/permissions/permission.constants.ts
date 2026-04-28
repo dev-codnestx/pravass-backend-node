@@ -13,6 +13,7 @@ export const APP_MODULES = [
   'reports',
   'banners',
   'website-users',
+  'employee-management',
   'settings',
 ] as const;
 
