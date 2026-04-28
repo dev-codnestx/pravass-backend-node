@@ -10,6 +10,7 @@ import { tokenService } from '../token/index.js';
 import { userService } from '../user/index.js';
 import { authService } from './index.js';
 import { oauthLogin } from './oauth/services/oauthLogin.service.js';
+import { CLIENT_TYPE_HEADER, DEFAULT_CLIENT_TYPE } from './auth.constants.js';
 
 const cookieSameSite: 'none' | 'lax' = config.env === 'production' ? 'none' : 'lax';
 
@@ -24,8 +25,8 @@ const getRefreshTokenFromRequest = (req: Request): string | undefined =>
   (req.body?.refreshToken as string | undefined) || req.cookies?.refreshToken;
 
 const getPlatformSourceFromRequest = (req: Request): string => {
-  const clientType = req.get('x-client-type');
-  return (clientType ? clientType.trim().toLowerCase() : 'website') || 'website';
+  const clientType = req.get(CLIENT_TYPE_HEADER);
+  return (clientType ? clientType.trim().toLowerCase() : DEFAULT_CLIENT_TYPE) || DEFAULT_CLIENT_TYPE;
 };
 
 const setAuthCookies = (res: Response, tokens: any) => {
