@@ -2,11 +2,13 @@ import { model, Schema, type Document, type Model } from 'mongoose';
 
 import { applyMasterBasePlugin, type MasterStatus } from '@/modules/masters/common/masterBase.plugin.js';
 import { type MasterModuleKey } from '@/modules/masters/common/master.constants.js';
+import { slugify } from '@/shared/utils/commonHelper.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 import { TOUR_CATEGORY } from '@/shared/constants/enum.constant.js';
 
 export interface IMasterDoc extends Document {
   name: string;
+  slug: string;
   status: MasterStatus;
   createdBy: Schema.Types.ObjectId;
   updatedBy: Schema.Types.ObjectId;
@@ -17,8 +19,21 @@ export interface IMasterDoc extends Document {
 }
 
 const createMasterSchema = (extraFields: Record<string, unknown> = {}) => {
-  const schema = new Schema<IMasterDoc>(extraFields, {
-    strict: true,
+  const schema = new Schema<IMasterDoc>(
+    {
+      name: { type: String, required: true, trim: true },
+      slug: { type: String, trim: true, lowercase: true, index: true },
+      ...extraFields,
+    },
+    {
+      strict: true,
+      timestamps: true,
+    },
+  );
+
+  schema.pre('save', async function () {
+    const doc = this as unknown as IMasterDoc;
+    if (doc.isModified('name') || !doc.slug) doc.slug = slugify(doc.name);
   });
 
   applyMasterBasePlugin(schema);

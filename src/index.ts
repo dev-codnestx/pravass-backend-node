@@ -7,10 +7,13 @@ import config from '@/shared/config/config.js';
 import connectToDatabase from '@/shared/config/dbConfig.js';
 import logger from '@/shared/config/logger.js';
 
+import { initializeCronJobs } from '@/shared/utils/cron.js';
+
 let server: Server;
 
 connectToDatabase().then(() => {
   logger.info('Connected to MongoDB');
+  initializeCronJobs();
   server = app.listen(config.port, () => {
     logger.info(`Listening to port ${config.port}`);
   });
