@@ -1,14 +1,16 @@
 import { Schema, model, Document, Types } from 'mongoose';
 
-import { blogCategories, blogStatuses } from '@/shared/constants/enum.constant.js';
+import { blogStatuses } from '@/shared/constants/enum.constant.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
 
+import { slugify } from '@/shared/utils/commonHelper.js';
 import { IBlogModel } from './blog.interfaces.js';
 
 export interface IBlog extends Document {
   _id: Types.ObjectId;
   featuredImage?: string;
   title: string;
+  slug: string;
   category: string;
   author?: string;
   content?: string;
@@ -24,9 +26,9 @@ const blogSchema = new Schema<IBlog>(
   {
     featuredImage: { type: String, trim: true, default: '' },
     title: { type: String, required: true, trim: true, index: true },
+    slug: { type: String, trim: true, lowercase: true, index: true },
     category: {
       type: String,
-      enum: blogCategories,
       required: true,
       index: true,
     },
@@ -56,6 +58,11 @@ const blogSchema = new Schema<IBlog>(
 
 blogSchema.plugin(toJSON);
 blogSchema.plugin(paginate);
+
+blogSchema.pre('save', async function () {
+  const doc = this as unknown as IBlog;
+  if (doc.isModified('title') || !doc.slug) doc.slug = slugify(doc.title);
+});
 
 // Static: check if title is already taken
 blogSchema.statics.isTitleTaken = async function (title: string, excludeBlogId?: string) {

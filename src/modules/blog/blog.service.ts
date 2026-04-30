@@ -152,3 +152,10 @@ export const buildBlogFilter = (query: Record<string, any>): Record<string, any>
 
   return filter;
 };
+
+/**
+ * Get blog by slug
+ * @param {string} slug
+ * @returns {Promise<IBlogDoc | null>}
+ */
+export const getBlogBySlug = async (slug: string): Promise<IBlogDoc | null> => Blog.findOne({ slug });

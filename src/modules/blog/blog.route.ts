@@ -13,6 +13,8 @@ router
   .post(authMiddleware('manageBlogs'), validateMiddleware(blogValidation.createBlog), blogController.createBlog)
   .get(validateMiddleware(blogValidation.getBlogs), blogController.getBlogs);
 
+router.get('/slug/:slug', blogController.getBlogBySlug);
+
 router
   .route('/:blogId')
   .get(validateMiddleware(blogValidation.getBlog), blogController.getBlog)

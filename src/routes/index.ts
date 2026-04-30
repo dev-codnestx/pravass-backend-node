@@ -18,6 +18,7 @@ import specialityTourRoute from '@/modules/specialityTours/specialityTour.route.
 import dealRoute from '@/modules/deals/deal.route.js';
 import leadRoute from '@/modules/leads/lead.route.js';
 import customerRoute from '@/modules/customers/customer.route.js';
+import notificationRoute from '@/modules/notifications/notification.route.js';
 
 const router = express.Router();
 
@@ -99,6 +100,10 @@ const setupRoutes = () => {
     {
       path: '/customers',
       route: customerRoute,
+    },
+    {
+      path: '/notifications',
+      route: notificationRoute,
     },
   ];
 
