@@ -30,8 +30,7 @@ const createDeal = async (dealBody: IDeal): Promise<IDealDoc> => {
 };
 
 const queryDeals = async (filter: Record<string, unknown>, options: Record<string, unknown>): Promise<QueryResult> =>
-  DealModel.paginate({ ...filter, isDeleted: false }, { ...options, populate: 'tourIds' });
-
+  DealModel.paginate({ ...filter, isDeleted: false }, { ...options, populate: (options.populate as string) || 'tourIds' });
 const getDealById = async (id: string): Promise<IDealDoc | null> =>
   DealModel.findOne({ _id: id, isDeleted: false }).populate('tourIds');
 
