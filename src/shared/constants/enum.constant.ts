@@ -5,7 +5,14 @@ export const blogCategories = ['Travel Tips', 'Guides', 'Honeymoon', 'Adventure'
 export const blogStatuses = ['Draft', 'Published'] as const;
 
 // FAQ enums
-export const faqCategories = ['Booking', 'Travel', 'Insurance', 'Payment'] as const;
+export const faqCategories = [
+  'customholidaybuilder',
+  'transportservice',
+  'travelassistance',
+  'staydetails',
+  'additionalservice',
+  'corporatetours',
+] as const;
 export const faqStatuses = ['Active', 'Inactive'] as const;
 
 // Career / Job enums
