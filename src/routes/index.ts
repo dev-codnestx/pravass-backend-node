@@ -19,6 +19,8 @@ import dealRoute from '@/modules/deals/deal.route.js';
 import leadRoute from '@/modules/leads/lead.route.js';
 import customerRoute from '@/modules/customers/customer.route.js';
 
+import bookingRoute from '@/modules/bookings/booking.route.js';
+
 const router = express.Router();
 
 interface IRoute {
@@ -99,6 +101,10 @@ const setupRoutes = () => {
     {
       path: '/customers',
       route: customerRoute,
+    },
+    {
+      path: '/bookings',
+      route: bookingRoute,
     },
   ];
 

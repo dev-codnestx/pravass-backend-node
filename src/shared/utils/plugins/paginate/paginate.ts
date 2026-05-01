@@ -22,6 +22,7 @@ export interface QueryResult<T = any> {
   limit: number;
   totalPages: number;
   totalResults: number;
+  total: number; // Alias for totalResults
   counts?: Record<string, number>;
   [key: string]: any;
 }
@@ -35,20 +36,21 @@ export interface PaginateModel<T extends Document> extends Model<T> {
 
 // --- Helper Functions ---
 
-const buildNestedPopulateQuery = (field: string, selectFields: string[]): any => {
+const buildNestedPopulateQuery = (field: string, selectFields?: string[]): any => {
   const nestedPathSegments = field.split('.');
+  const select = selectFields ? selectFields.join(' ') : '';
 
   if (nestedPathSegments.length > 1) {
     const [firstSegment, ...restSegments] = nestedPathSegments;
     return {
       path: firstSegment,
-      select: selectFields.join(' '),
+      select,
       populate: buildNestedPopulateQuery(restSegments.join('.'), selectFields),
     };
   }
   return {
     path: field,
-    select: selectFields.join(' '),
+    select,
   };
 };
 
@@ -64,6 +66,7 @@ const buildResult = <T>(
   limit: page === -1 ? totalResults : limit,
   totalPages,
   totalResults,
+  total: totalResults, // Added alias for compatibility with frontend expectations
 });
 
 function getDeepValue(obj: any, path: string): any {
@@ -180,8 +183,9 @@ const paginate = <T extends Document>(schema: Schema<T>): void => {
             }
           });
         }
-        doc.id = doc._id;
-        delete doc._id;
+        doc.id = doc._id?.toString();
+        // Keep _id if it's not a plain object or if toJSON hasn't run yet,
+        // but typically for aggregation results we want to standardize on id.
         return doc;
       });
 
@@ -199,26 +203,27 @@ const paginate = <T extends Document>(schema: Schema<T>): void => {
           const opt = populateOption.trim();
           if (!opt) return;
 
-          const [path, fields] = opt.split(':');
-          const select = fields ? fields.split(',').map((f) => f.trim()) : ['_id'];
+          const [rawPath, fields] = opt.split(':');
+          const path = rawPath.replace(/,/g, ' ');
+          const select = fields ? fields.split(',').map((f) => f.trim()) : undefined;
 
           if (path)
             if (path.includes('-')) {
               const [parentField, childFields] = path.split('-');
               docsPromise = docsPromise.populate({
                 path: parentField,
-                select: select.join(' '),
+                select: select ? select.join(' ') : '',
                 populate: childFields.split(',').map((child) => buildNestedPopulateQuery(child, select)),
               });
             } else if (path.includes('.')) {
               const [parent, ...rest] = path.split('.');
               docsPromise = docsPromise.populate({
                 path: parent,
-                select: select.join(' '),
+                select: select ? select.join(' ') : '',
                 populate: buildNestedPopulateQuery(rest.join('.'), select),
               });
             } else {
-              docsPromise = docsPromise.populate({ path, select: select.join(' ') });
+              docsPromise = docsPromise.populate({ path, select: select ? select.join(' ') : '' });
             }
         });
 
@@ -246,12 +251,14 @@ const paginate = <T extends Document>(schema: Schema<T>): void => {
                   .forEach((field) => {
                     const fullPath = basePath ? `${basePath}.${field}` : field;
                     const value = getDeepValue(plainDoc, fullPath);
-                    if (value !== undefined && plainDoc[field] === undefined) plainDoc[field] = value;
+                    // Support both comma and space separated fields for flattening
+                    if (value !== undefined && (plainDoc[field] === undefined || plainDoc[field] === null))
+                      plainDoc[field] = value;
                   });
               }
             });
 
-        // plainDoc.id = plainDoc._id;
+        if (plainDoc._id) plainDoc.id = plainDoc._id.toString();
         return plainDoc;
       });
 

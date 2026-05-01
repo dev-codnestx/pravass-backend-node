@@ -47,6 +47,8 @@ const envVarsSchema = Joi.object()
     ADMIN_FRONTEND_URL: Joi.string().required().description('Admin Client url'),
     GOOGLE_CLIENT_ID: Joi.string().description('Google Client ID is missing'),
     GOOGLE_CLIENT_SECRET: Joi.string().description('Google Client Secret is missing'),
+    RAZORPAY_KEY_ID: Joi.string().description('Razorpay Key ID is missing'),
+    RAZORPAY_KEY_SECRET: Joi.string().description('Razorpay Key Secret is missing'),
   })
   .unknown();
 
@@ -108,6 +110,10 @@ const config = {
   google: {
     clientId: envVars.GOOGLE_CLIENT_ID,
     clientSecret: envVars.GOOGLE_CLIENT_SECRET,
+  },
+  razorpay: {
+    keyId: envVars.RAZORPAY_KEY_ID,
+    keySecret: envVars.RAZORPAY_KEY_SECRET,
   },
 };
 

@@ -79,6 +79,10 @@ const entitiesAndCustomCodes: EntityDefinition[] = [
   {
     name: 'Customer',
   },
+  {
+    name: 'Booking',
+    customCodes: ['TOUR_NOT_AVAILABLE', 'SEATS_UNAVAILABLE', 'PAYMENT_FAILED', 'PAYMENT_VERIFICATION_FAILED'],
+  },
 ];
 
 export const generateEntitiesWithKeys = (entities: EntityDefinition[]): EntityWithKey[] => {
