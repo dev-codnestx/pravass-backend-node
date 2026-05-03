@@ -3,6 +3,17 @@ import { RoleModel } from '../modules/roles/role.model.js';
 
 const SUPER_ADMIN_EMAIL = 'admin@pravass.com';
 const SUPER_ADMIN_USER_TYPE = 'superadmin';
+const SUPER_ADMIN_PROFILE = {
+  fullName: 'Super Administrator',
+  phoneNumber: '+1234567890',
+  userType: SUPER_ADMIN_USER_TYPE,
+  status: 'active' as const,
+  isEmailVerified: true,
+  failedLoginAttempts: 0,
+  mustChangePassword: true,
+  twoFactorEnabled: false,
+  refreshTokenVersion: 0,
+};
 
 /**
  * Seed super admin user
@@ -19,31 +30,23 @@ export const seedSuperAdmin = async (): Promise<void> => {
     const defaultPassword = process.env.SUPER_ADMIN_PASSWORD || 'Admin@123456';
 
     const superAdmin = await UserModel.create({
-      fullName: 'Super Administrator',
+      ...SUPER_ADMIN_PROFILE,
       email: SUPER_ADMIN_EMAIL,
-      phone: '+1234567890',
       passwordHash: defaultPassword,
       roleId: superAdminRole._id,
-      userType: SUPER_ADMIN_USER_TYPE,
-      status: 'active',
-      isEmailVerified: true,
-      failedLoginAttempts: 0,
-      mustChangePassword: true,
-      twoFactorEnabled: false,
-      refreshTokenVersion: 0,
     });
 
     console.info(`✅ Created super admin user: ${superAdmin.email}`);
     console.info(`🔑 Default password: ${defaultPassword}`);
     console.info('⚠️  Please change the default password after first login!');
   } else {
-    // Keep existing super admin role/status, but do not overwrite userType.
+    // Keep SUPER_ADMIN profile aligned with latest seeded keys (including userType).
     await UserModel.updateOne(
       { email: SUPER_ADMIN_EMAIL },
       {
         $set: {
+          ...SUPER_ADMIN_PROFILE,
           roleId: superAdminRole._id,
-          status: 'active',
         },
       },
     );

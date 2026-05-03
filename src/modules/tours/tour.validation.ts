@@ -166,6 +166,8 @@ const policies = Joi.object({
   payment: Joi.array().items(Joi.string().trim().min(1)).optional(),
   cancellation: Joi.array().items(Joi.string().trim().min(1)).optional(),
   termsAndConditions: Joi.array().items(Joi.string().trim().min(1)).optional(),
+  refundPolicyId: Joi.string().allow('', null),
+  refundPolicy: Joi.string().allow('', null),
   paymentPolicy: Joi.string().allow('', null),
   cancellationPolicy: Joi.string().allow('', null),
   terms: Joi.string().allow('', null),
@@ -281,6 +283,12 @@ const getTours = {
   }),
 };
 
+const searchFlights = {
+  query: Joi.object().keys({
+    airline: Joi.string().trim().required(),
+  }),
+};
+
 const getTour = {
   params: Joi.object().keys({
     tourId: Joi.string().required().custom(objectId),
@@ -312,6 +320,7 @@ const duplicateTour = {
 export const tourValidation = {
   createTour,
   getTours,
+  searchFlights,
   getTour,
   updateTour,
   deleteTour,

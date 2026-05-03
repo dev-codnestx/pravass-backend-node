@@ -49,6 +49,8 @@ const envVarsSchema = Joi.object()
     GOOGLE_CLIENT_SECRET: Joi.string().description('Google Client Secret is missing'),
     RAZORPAY_KEY_ID: Joi.string().description('Razorpay Key ID is missing'),
     RAZORPAY_KEY_SECRET: Joi.string().description('Razorpay Key Secret is missing'),
+    AVIATIONSTACK_API_KEY: Joi.string().allow('').optional().description('AviationStack API key'),
+    AVIATIONSTACK_BASE_URL: Joi.string().allow('').optional().description('AviationStack base URL'),
   })
   .unknown();
 
@@ -114,6 +116,10 @@ const config = {
   razorpay: {
     keyId: envVars.RAZORPAY_KEY_ID,
     keySecret: envVars.RAZORPAY_KEY_SECRET,
+  },
+  aviationstack: {
+    apiKey: envVars.AVIATIONSTACK_API_KEY,
+    baseUrl: envVars.AVIATIONSTACK_BASE_URL || 'http://api.aviationstack.com/v1/flights',
   },
 };
 

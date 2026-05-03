@@ -2,8 +2,10 @@
 
 import httpStatus from 'http-status';
 import mongoose, { Types } from 'mongoose';
+import axios from 'axios';
 
 import { masterModels } from '@/modules/masters/models/master.models.js';
+import config from '@/shared/config/config.js';
 import ApiError from '@/shared/utils/errors/ApiError.js';
 import { cloneDocument } from '@/shared/utils/copy.command.js';
 import { getEntityByIdWithQueryString } from '@/shared/utils/modelPopulateFields.js';
@@ -50,6 +52,26 @@ const uniqueStrings = (values: unknown[]): string[] => {
 
 const toObjectIdStrings = (values: unknown[]): string[] =>
   uniqueStrings(values).filter((value) => mongoose.Types.ObjectId.isValid(value));
+
+const resolveActivityIdsFromDestinations = async (destinationIds: string[]): Promise<string[]> => {
+  if (!destinationIds.length) return [];
+
+  const destinations = await masterModels.destinations
+    .find({ _id: { $in: destinationIds } })
+    .select('activityIds')
+    .lean();
+
+  const activityIdSet = new Set<string>();
+  destinations.forEach((destination) => {
+    const activityIds = Array.isArray(destination.activityIds) ? destination.activityIds : [];
+    activityIds.forEach((activityId) => {
+      const normalizedId = toTrimmedString(String(activityId));
+      if (normalizedId && mongoose.Types.ObjectId.isValid(normalizedId)) activityIdSet.add(normalizedId);
+    });
+  });
+
+  return Array.from(activityIdSet);
+};
 
 const resolveTourTypeMeta = async (value: unknown): Promise<{ id: string; name?: string } | undefined> => {
   const normalized = toTrimmedString(value);
@@ -320,11 +342,16 @@ const applyPolicyAliases = (payload: Record<string, unknown>) => {
     ...toPolicyArray(payload.terms),
     ...toPolicyArray(payload.termsAndConditions),
   ];
+  const refundPolicyId =
+    toTrimmedString(policies.refundPolicyId) ??
+    toTrimmedString(policies.refundPolicy) ??
+    toTrimmedString(payload.refundPolicy);
 
   const normalizedPolicies: ITourPolicies = {
     payment: [...new Set(payment)],
     cancellation: [...new Set(cancellation)],
     termsAndConditions: [...new Set(termsAndConditions)],
+    refundPolicyId,
   };
 
   payload.policies = normalizedPolicies;
@@ -337,6 +364,8 @@ const applyPolicyAliases = (payload: Record<string, unknown>) => {
 
   if (!payload.terms && normalizedPolicies.termsAndConditions && normalizedPolicies.termsAndConditions.length > 0)
     payload.terms = normalizedPolicies.termsAndConditions.join('\n');
+
+  if (!payload.refundPolicy && normalizedPolicies.refundPolicyId) payload.refundPolicy = normalizedPolicies.refundPolicyId;
 };
 
 const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<ITour>> => {
@@ -357,8 +386,17 @@ const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<I
   ];
   if (activityIds.length > 0) mutableBody.activityIds = [...new Set(activityIds)];
 
-  const destinationIds = Array.isArray(mutableBody.destinationIds) ? toObjectIdStrings(mutableBody.destinationIds) : [];
-  if (destinationIds.length > 0) mutableBody.destinationIds = destinationIds;
+  const hasDestinationIdsInPayload = Array.isArray(mutableBody.destinationIds);
+  const destinationIds = hasDestinationIdsInPayload ? toObjectIdStrings(mutableBody.destinationIds as unknown[]) : [];
+  if (hasDestinationIdsInPayload) mutableBody.destinationIds = destinationIds;
+
+  const hasExplicitActivityIds =
+    Array.isArray(mutableBody.activityIds) || (Array.isArray(mutableBody.activities) && mutableBody.activities.length > 0);
+  if (hasDestinationIdsInPayload && !hasExplicitActivityIds) {
+    const mappedActivityIds = await resolveActivityIdsFromDestinations(destinationIds);
+    // eslint-disable-next-line require-atomic-updates
+    mutableBody.activityIds = mappedActivityIds;
+  }
 
   const resolvedTourType = await resolveTourTypeMeta(mutableBody.tourType);
   // eslint-disable-next-line require-atomic-updates
@@ -540,6 +578,75 @@ const queryTours = async (filter: Record<string, unknown>, options: PaginateOpti
   );
 };
 
+type FlightLookupSuggestion = {
+  flightNumber: string;
+  from: string;
+  to: string;
+  departureTime: string;
+  arrivalTime: string;
+  stops: number;
+};
+
+const toTimeValue = (value: unknown): string => {
+  if (typeof value !== 'string' || !value.trim()) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return date.toISOString().slice(11, 16);
+};
+
+const searchFlightsByAirline = async (airline: string): Promise<FlightLookupSuggestion[]> => {
+  const normalizedAirline = airline.trim().toUpperCase();
+  if (!normalizedAirline) return [];
+
+  const apiKey = config.aviationstack.apiKey;
+  if (!apiKey) return [];
+
+  const { data } = await axios.get(config.aviationstack.baseUrl, {
+    params: {
+      access_key: apiKey,
+      airline_iata: normalizedAirline,
+    },
+    timeout: 15000,
+  });
+
+  const rows = Array.isArray(data?.data) ? data.data : [];
+  const suggestions: FlightLookupSuggestion[] = [];
+  const seen = new Set<string>();
+
+  rows.forEach((flight: Record<string, unknown>) => {
+    const flightNode = (flight.flight as Record<string, unknown>) || {};
+    const departureNode = (flight.departure as Record<string, unknown>) || {};
+    const arrivalNode = (flight.arrival as Record<string, unknown>) || {};
+
+    const flightNumber = String(flightNode.iata ?? flightNode.number ?? '')
+      .trim()
+      .toUpperCase();
+    const from = String(departureNode.iata ?? '')
+      .trim()
+      .toUpperCase();
+    const to = String(arrivalNode.iata ?? '')
+      .trim()
+      .toUpperCase();
+    if (!flightNumber || !from || !to) return;
+
+    const key = `${flightNumber}-${from}-${to}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    const stops = Math.max(0, Number(flightNode.number_of_stops ?? 0));
+    suggestions.push({
+      flightNumber,
+      from,
+      to,
+      departureTime: toTimeValue(departureNode.scheduled),
+      arrivalTime: toTimeValue(arrivalNode.scheduled),
+      stops: Number.isFinite(stops) ? stops : 0,
+    });
+  });
+
+  return suggestions;
+};
+
 const getTourById = async (id: string, options?: { populate?: string; fields?: string }): Promise<ITourDoc | null> => {
   let tour: ITourDoc | null = null;
   if (options && (options.populate || options.fields))
@@ -631,6 +738,7 @@ const duplicateTourById = async (tourId: string): Promise<ITourDoc> => {
 export const tourService = {
   createTour,
   queryTours,
+  searchFlightsByAirline,
   getTourById,
   updateTourById,
   deleteTourById,

@@ -55,6 +55,7 @@ const userSchema = new Schema<IUser>(
         },
       },
     ],
+    wishlist: [{ type: Schema.Types.ObjectId, ref: 'Tour' }],
   },
   {
     timestamps: true,

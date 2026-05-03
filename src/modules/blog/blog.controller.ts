@@ -35,6 +35,15 @@ export const getBlog = catchAsync(async (req: Request, res: Response) => {
   }
 });
 
+export const getBlogBySlug = catchAsync(async (req: Request, res: Response) => {
+  if (typeof req.params['slug'] === 'string') {
+    const blog = await blogService.getBlogBySlug(req.params['slug']);
+    if (!blog) throw new ApiError(httpStatus.NOT_FOUND, 'Blog not found');
+
+    res.success({ blog }, responseCodes.BlogResponseCodes.SUCCESS, 'Blog fetched successfully');
+  }
+});
+
 export const updateBlog = catchAsync(async (req: Request, res: Response) => {
   if (typeof req.params['blogId'] === 'string') {
     // TODO: Replace with AWS S3 upload logic later

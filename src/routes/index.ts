@@ -18,6 +18,7 @@ import specialityTourRoute from '@/modules/specialityTours/specialityTour.route.
 import dealRoute from '@/modules/deals/deal.route.js';
 import leadRoute from '@/modules/leads/lead.route.js';
 import customerRoute from '@/modules/customers/customer.route.js';
+import notificationRoute from '@/modules/notifications/notification.route.js';
 
 import bookingRoute from '@/modules/bookings/booking.route.js';
 
@@ -105,6 +106,10 @@ const setupRoutes = () => {
     {
       path: '/bookings',
       route: bookingRoute,
+    },
+    {
+      path: '/notifications',
+      route: notificationRoute,
     },
   ];
 

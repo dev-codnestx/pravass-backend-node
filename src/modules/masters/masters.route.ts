@@ -20,7 +20,7 @@ MASTER_MODULES.forEach((moduleKey) => {
 
   router
     .route(modulePath)
-    .get(authMiddleware(), validateMiddleware(mastersValidation.listMasters), controller.list)
+    .get(authMiddleware({ allowGuestFor: ['website'] }), validateMiddleware(mastersValidation.listMasters), controller.list)
     .post(
       authMiddleware(),
       validateMiddleware(mastersValidation.createMaster),
@@ -37,9 +37,15 @@ MASTER_MODULES.forEach((moduleKey) => {
       controller.reorder,
     );
 
+  router.get(`${modulePath}/slug/:slug`, authMiddleware({ allowGuestFor: ['website'] }), controller.getBySlug);
+
   router
     .route(`${modulePath}/:id`)
-    .get(authMiddleware(), validateMiddleware(mastersValidation.getMasterById), controller.getById)
+    .get(
+      authMiddleware({ allowGuestFor: ['website'] }),
+      validateMiddleware(mastersValidation.getMasterById),
+      controller.getById,
+    )
     .put(
       authMiddleware(),
       (req, res, next) => {

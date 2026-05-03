@@ -267,7 +267,7 @@ export const syncBookingWithTour = async (booking: IBookingDoc, previousStatus?:
           departure.totalSeatsAvailable = Math.max(0, departure.totalSeatsAvailable - booking.totalTravelers);
 
         // Mark specific seats as booked and link to this booking
-        if (booking.selectedSeats && booking.selectedSeats.length > 0 && departure.seatStates)
+        if (booking.selectedSeats && booking.selectedSeats.length > 0 && departure.seatStates) {
           booking.selectedSeats.forEach((seatNo: string, index: number) => {
             const seat = (departure.seatStates as any[]).find((s) => s.seat_no === seatNo);
             if (seat) {
@@ -277,6 +277,19 @@ export const syncBookingWithTour = async (booking: IBookingDoc, previousStatus?:
               seat.passengerName = booking.travelers?.[index]?.fullName || booking.contactName;
             }
           });
+        } else if (departure.seatStates && (departure.seatStates as any[]).length > 0) {
+          // If no specific seats selected (e.g. non-bus transport), mark first N available seats as booked
+          let travelersToAssign = booking.totalTravelers;
+          for (const seat of departure.seatStates as any[]) {
+            if (travelersToAssign <= 0) break;
+            if (seat.status === 'available') {
+              seat.status = 'booked';
+              seat.bookingId = booking._id;
+              seat.passengerName = booking.contactName;
+              travelersToAssign--;
+            }
+          }
+        }
       }
       // If status changed FROM confirmed TO cancelled/failed
       else if (
@@ -289,16 +302,18 @@ export const syncBookingWithTour = async (booking: IBookingDoc, previousStatus?:
         // Increase available seats for this departure
         if (departure.totalSeatsAvailable !== undefined) departure.totalSeatsAvailable += booking.totalTravelers;
 
-        // Mark seats as available again
-        if (booking.selectedSeats && booking.selectedSeats.length > 0 && departure.seatStates)
-          booking.selectedSeats.forEach((seatNo: string) => {
-            const seat = (departure.seatStates as any[]).find((s) => s.seat_no === seatNo);
-            // Only release if it was linked to this specific booking
-            if (seat && (seat.bookingId?.toString() === booking._id.toString() || seat.status === 'booked')) {
+        // Release seats linked to this booking
+        if (departure.seatStates && (departure.seatStates as any[]).length > 0)
+          (departure.seatStates as any[]).forEach((seat) => {
+            // Check by bookingId or if it's one of the selected seats (fallback for robustness)
+            const isMatch =
+              seat.bookingId?.toString() === booking._id.toString() ||
+              (booking.selectedSeats && booking.selectedSeats.includes(seat.seat_no));
+
+            if (isMatch) {
               seat.status = 'available';
-              // Using dot notation for cleanup
-              (seat as any).bookingId = undefined;
-              (seat as any).passengerName = undefined;
+              seat.bookingId = undefined;
+              seat.passengerName = undefined;
             }
           });
       }
@@ -373,18 +388,24 @@ export const queryBookings = async (filter: Record<string, any>, options: Record
 };
 
 export const getBookingById = async (id: string) => {
-  const booking = (await BookingModel.findById(id).populate(
-    'tourId customerId sourceUserId departureCityId',
-  )) as unknown as IBookingDoc;
+  const booking = (await BookingModel.findById(id).populate([
+    { path: 'tourId', populate: { path: 'tourType' } },
+    { path: 'customerId' },
+    { path: 'sourceUserId' },
+    { path: 'departureCityId' },
+  ])) as unknown as IBookingDoc;
   if (!booking || booking.isDeleted) throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found');
 
   return booking;
 };
 
 export const getBookingByRef = async (ref: string) => {
-  const booking = (await BookingModel.findOne({ bookingRef: ref }).populate(
-    'tourId customerId sourceUserId departureCityId',
-  )) as unknown as IBookingDoc;
+  const booking = (await BookingModel.findOne({ bookingRef: ref }).populate([
+    { path: 'tourId', populate: { path: 'tourType' } },
+    { path: 'customerId' },
+    { path: 'sourceUserId' },
+    { path: 'departureCityId' },
+  ])) as unknown as IBookingDoc;
   if (!booking || booking.isDeleted) throw new ApiError(httpStatus.NOT_FOUND, 'Booking not found');
 
   return booking;

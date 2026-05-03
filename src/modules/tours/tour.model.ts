@@ -177,6 +177,7 @@ const tourPoliciesSchema = new Schema(
     payment: [{ type: String, trim: true }],
     cancellation: [{ type: String, trim: true }],
     termsAndConditions: [{ type: String, trim: true }],
+    refundPolicyId: { type: Types.ObjectId, ref: 'MasterRefundPolicy' },
   },
   { _id: false },
 );
@@ -248,7 +249,6 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
     tourCategory: { type: String, trim: true, enum: TOUR_CATEGORY, default: TOUR_CATEGORY.DOMESTIC },
     paymentPlan: { type: String, trim: true },
-    refundPolicy: { type: String, trim: true },
     paymentPolicy: { type: String, trim: true },
     cancellationPolicy: { type: String, trim: true },
     terms: { type: String, trim: true },
@@ -393,11 +393,16 @@ tourSchema.pre('validate', function normalizeTour() {
     ...toPolicyArray(existingPolicies.terms),
     ...toPolicyArray(draft.terms),
   ];
+  const legacyPolicyRefund = (existingPolicies as Record<string, unknown>).refundPolicy;
+  const refundPolicyId =
+    String((existingPolicies.refundPolicyId ?? legacyPolicyRefund ?? draft.refundPolicy ?? '') as string).trim() ||
+    undefined;
 
   draft.policies = {
     payment: [...new Set(payment)],
     cancellation: [...new Set(cancellation)],
     termsAndConditions: [...new Set(termsAndConditions)],
+    refundPolicyId,
   };
 
   if (!draft.paymentPolicy && draft.policies.payment.length > 0) draft.paymentPolicy = draft.policies.payment.join('\n');

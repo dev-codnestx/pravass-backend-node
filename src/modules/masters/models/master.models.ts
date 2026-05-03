@@ -106,6 +106,7 @@ const paymentPlanSchema = createMasterSchema({
 });
 
 const refundPolicySchema = createMasterSchema({
+  description: { type: String, trim: true },
   daysBefore: { type: String, trim: true },
   refundPercent: { type: String, trim: true },
   noShow: { type: String, trim: true },
@@ -185,4 +186,5 @@ export const masterModels: Record<MasterModuleKey, Model<IMasterDoc>> = {
   'sharing-types': model<IMasterDoc>('MasterSharingType', sharingTypeSchema),
   'tour-types': model<IMasterDoc>('MasterTourType', tourTypeSchema),
   activities: model<IMasterDoc>('MasterActivity', activitySchema),
+  'blog-categories': model<IMasterDoc>('MasterBlogCategory', createMasterSchema()),
 };

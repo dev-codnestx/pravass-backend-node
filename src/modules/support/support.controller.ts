@@ -8,8 +8,8 @@ import pick from '@/shared/utils/pick.js';
 export const createTicket = catchAsync(async (req: Request, res: Response) => {
   const ticket = await supportService.createTicket({
     ...req.body,
-    customer: req.user._id,
-    customerName: req.user.fullName,
+    customer: req.user?._id || req.user?.id,
+    customerName: req.user?.fullName || req.user?.firstName || 'User',
   });
   res.status(httpStatus.CREATED).send(ticket);
 });
@@ -18,6 +18,12 @@ export const getTickets = catchAsync(async (req: Request, res: Response) => {
   const filter = pick(req.query, ['subject', 'status', 'priority', 'ticketId']);
   const options = pick(req.query, ['sortBy', 'limit', 'page', 'populate', 'fields', 'includeTimeStamps']);
 
+  // If not admin, only show own tickets
+  const userRole = (req.user?.roleId as any)?.code || '';
+  const isAdmin = ['SUPER_ADMIN', 'ADMIN', 'AGENT'].includes(userRole);
+
+  if (!isAdmin) filter.customer = req.user?._id || req.user?.id;
+
   if (req.query.search) {
     const searchRegex = { $regex: req.query.search, $options: 'i' };
     filter.$or = [{ subject: searchRegex }, { ticketId: searchRegex }, { customerName: searchRegex }];
@@ -25,8 +31,11 @@ export const getTickets = catchAsync(async (req: Request, res: Response) => {
 
   filter.isDeleted = false;
 
+  const statsFilter: Record<string, any> = {};
+  if (!isAdmin) statsFilter.customer = req.user?._id || req.user?.id;
+
   const result = await supportService.queryTickets(filter, options);
-  const stats = await supportService.getSupportStats();
+  const stats = await supportService.getSupportStats(statsFilter);
   res.send({ ...result, stats });
 });
 

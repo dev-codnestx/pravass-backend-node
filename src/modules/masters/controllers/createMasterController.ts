@@ -182,15 +182,15 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
       const skip = (page - 1) * limit;
       const query = buildQuery(req.query);
 
-      const [items, total] = await Promise.all([
+      const [results, totalResults] = await Promise.all([
         applyPopulate(Model.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit), req.query.populate).lean(),
         Model.countDocuments(query),
       ]);
 
       res.success(
         {
-          items,
-          total,
+          results,
+          totalResults,
           page,
           limit,
         },
@@ -202,6 +202,19 @@ export const createMasterController = (Model: Model<IMasterDoc>, moduleKey: Mast
     getById: catchAsync(async (req: Request, res: Response) => {
       const item = Model.findOne({
         _id: req.params.id,
+        deletedAt: null,
+      });
+
+      const populatedItem = await applyPopulate(item, req.query.populate).lean();
+
+      if (!populatedItem) throw new ApiError(httpStatus.NOT_FOUND, `${label} not found`);
+
+      res.success(populatedItem, responseCodes.LocationResponseCodes.SUCCESS, `${label} fetched successfully`);
+    }),
+
+    getBySlug: catchAsync(async (req: Request, res: Response) => {
+      const item = Model.findOne({
+        slug: req.params.slug,
         deletedAt: null,
       });
 

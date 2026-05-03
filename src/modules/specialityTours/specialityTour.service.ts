@@ -123,6 +123,9 @@ const buildSpecialityTourFilter = (query: Record<string, unknown>): Record<strin
   return filter;
 };
 
+const getSpecialityTourBySlug = async (slug: string): Promise<ISpecialityTourDoc | null> =>
+  SpecialityTourModel.findOne({ slug }).populate('packages.packageId');
+
 export const specialityTourService = {
   createSpecialityTour,
   querySpecialityTours,
@@ -131,4 +134,5 @@ export const specialityTourService = {
   deleteSpecialityTourById,
   duplicateSpecialityTourById,
   buildSpecialityTourFilter,
+  getSpecialityTourBySlug,
 };

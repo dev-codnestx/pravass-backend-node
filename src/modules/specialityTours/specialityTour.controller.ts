@@ -64,6 +64,14 @@ const duplicateSpecialityTour = catchAsync(async (req: Request, res: Response) =
   return res.success(specialityTour, 200, 'Speciality tour duplicated successfully');
 });
 
+const getSpecialityTourBySlug = catchAsync(async (req: Request, res: Response) => {
+  const specialityTour = await specialityTourService.getSpecialityTourBySlug(req.params.slug);
+
+  if (!specialityTour) throw new ApiError(httpStatus.NOT_FOUND, 'Speciality tour not found');
+
+  return res.success(specialityTour, 200, 'Speciality tour fetched successfully');
+});
+
 export const specialityTourController = {
   createSpecialityTour,
   getSpecialityTours,
@@ -71,4 +79,5 @@ export const specialityTourController = {
   updateSpecialityTour,
   deleteSpecialityTour,
   duplicateSpecialityTour,
+  getSpecialityTourBySlug,
 };
