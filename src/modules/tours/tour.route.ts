@@ -21,6 +21,7 @@ router
   .get(validateMiddleware(tourValidation.getTours), tourController.getTours);
 
 router.get('/flights/search', validateMiddleware(tourValidation.searchFlights), tourController.searchFlights);
+router.get('/slug/:slug', validateMiddleware(tourValidation.getTourBySlug), tourController.getTourBySlug);
 
 router
   .route('/:tourId')

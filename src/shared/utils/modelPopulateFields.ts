@@ -48,11 +48,12 @@ export const getEntityByIdWithQueryString = async <T extends Document>(params: {
   fields?: string;
   populate?: string;
   responseCode?: number;
+  idField?: string;
 }): Promise<T> => {
-  const { model, entityId, fields, populate, responseCode } = params;
+  const { model, entityId, fields, populate, responseCode, idField = '_id' } = params;
   const populateFields = parsePopulateString(populate);
 
-  let query = model.findById(entityId);
+  let query = idField === '_id' ? model.findById(entityId) : model.findOne({ [idField]: entityId });
 
   if (fields) query = query.select(fields);
 

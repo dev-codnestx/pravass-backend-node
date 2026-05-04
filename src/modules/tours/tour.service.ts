@@ -692,6 +692,51 @@ const getTourById = async (id: string, options?: { populate?: string; fields?: s
   return tour;
 };
 
+const getTourBySlug = async (slug: string, options?: { populate?: string; fields?: string }): Promise<ITourDoc | null> => {
+  let tour: ITourDoc | null = null;
+  if (options && (options.populate || options.fields))
+    try {
+      tour = await getEntityByIdWithQueryString({
+        model: TourModel,
+        entityId: slug,
+        populate: options.populate,
+        fields: options.fields,
+        idField: 'slug',
+      });
+    } catch (err: any) {
+      if (err.statusCode === 200 || err.statusCode === 404) return null;
+      throw err;
+    }
+  else tour = await TourModel.findOne({ slug, isDeleted: false });
+
+  if (!tour || tour.isDeleted) return null;
+
+  // Professional On-the-fly Population:
+  if (Array.isArray(tour.departures))
+    await Promise.all(
+      tour.departures.map(async (dep) => {
+        if ((!dep.seatStates || dep.seatStates.length === 0) && dep.vehicleId) {
+          const vehicle = await masterModels.vehicles.findById(dep.vehicleId).lean();
+          const layout = (vehicle as any)?.seatLayout;
+          if (layout && Array.isArray(layout.seats)) {
+            const mappedSeats = layout.seats.map((s: any) => ({
+              seat_no: s.seat_no || s.number,
+              status: s.status || 'available',
+              row: s.row,
+              column: s.column,
+              level: s.level,
+              type: s.type,
+            }));
+            // eslint-disable-next-line require-atomic-updates
+            dep.seatStates = mappedSeats;
+          }
+        }
+      }),
+    );
+
+  return tour;
+};
+
 const updateTourById = async (tourId: string, updateBody: Partial<ITour>): Promise<ITourDoc | null> => {
   const tour = await getTourById(tourId);
   if (!tour) throw new ApiError(httpStatus.NOT_FOUND, 'Tour not found');
@@ -740,6 +785,7 @@ export const tourService = {
   queryTours,
   searchFlightsByAirline,
   getTourById,
+  getTourBySlug,
   updateTourById,
   deleteTourById,
   duplicateTourById,
