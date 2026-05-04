@@ -48,11 +48,19 @@ const duplicateTour = catchAsync(async (req: Request, res: Response) => {
   return res.success(tour, 200, 'Tour duplicated successfully');
 });
 
+const getTourBySlug = catchAsync(async (req: Request, res: Response) => {
+  const options = pick(req.query, ['populate', 'fields']);
+  const tour = await tourService.getTourBySlug(req.params.slug, options);
+  if (!tour) return res.status(httpStatus.NOT_FOUND).error('Tour not found');
+  return res.success(tour, 200, 'Tour fetched successfully');
+});
+
 export const tourController = {
   createTour,
   getTours,
   searchFlights,
   getTour,
+  getTourBySlug,
   updateTour,
   deleteTour,
   duplicateTour,

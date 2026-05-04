@@ -21,7 +21,10 @@ const app: Express = express();
 // enable cors
 app.use(
   cors({
-    origin: true, // Allow all origins conditionally or specify frontend URL (e.g., config.frontendUrl)
+    origin: function (origin, callback) {
+      // Reflect the request origin to bypass wildcard credential restrictions
+      callback(null, origin || true);
+    },
     credentials: true,
   }),
 );

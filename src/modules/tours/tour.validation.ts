@@ -295,6 +295,12 @@ const getTour = {
   }),
 };
 
+const getTourBySlug = {
+  params: Joi.object().keys({
+    slug: Joi.string().required(),
+  }),
+};
+
 const updateTour = {
   params: Joi.object().keys({
     tourId: Joi.string().required().custom(objectId),
@@ -322,6 +328,7 @@ export const tourValidation = {
   getTours,
   searchFlights,
   getTour,
+  getTourBySlug,
   updateTour,
   deleteTour,
   duplicateTour,
