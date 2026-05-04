@@ -1,10 +1,15 @@
 import { Schema } from 'mongoose';
 
 import { MASTER_STATUSES, MasterStatus } from '@/modules/masters/common/master.constants.js';
+import { slugifyPlugin } from '@/shared/utils/plugins/slugify.plugin.js';
 
 export type { MasterStatus };
 
-export const applyMasterBasePlugin = (schema: Schema) => {
+export interface MasterBasePluginOptions {
+  addSlug?: boolean;
+}
+
+export const applyMasterBasePlugin = (schema: Schema, options: MasterBasePluginOptions = {}) => {
   schema.add({
     name: {
       type: String,
@@ -41,4 +46,6 @@ export const applyMasterBasePlugin = (schema: Schema) => {
 
   schema.index({ name: 1, deletedAt: 1 });
   schema.index({ status: 1, deletedAt: 1 });
+
+  if (options.addSlug) schema.plugin(slugifyPlugin, { sourceField: 'name', targetField: 'slug' });
 };

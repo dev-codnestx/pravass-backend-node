@@ -31,6 +31,7 @@ export interface IUser extends Document {
   createdAt: Date;
   updatedAt: Date;
   profileImage?: string;
+  wishlist: Types.ObjectId[];
   isPasswordMatch(candidatePassword: string): Promise<boolean>;
   incrementFailedAttempts(maxAttempts?: number): Promise<boolean>;
   resetFailedAttempts(): Promise<void>;

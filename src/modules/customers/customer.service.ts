@@ -289,6 +289,7 @@ export const customerService = {
   createOrGetCustomer,
   queryCustomers,
   getCustomerById,
+  findCustomerBySourceUserId,
   updateCustomerById,
   updateCustomerStatusById,
   deleteCustomerById,
