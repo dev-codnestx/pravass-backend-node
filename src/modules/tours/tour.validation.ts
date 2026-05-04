@@ -49,6 +49,8 @@ const seatState = Joi.object({
     .default('available'),
   row: Joi.number().allow(null),
   column: Joi.number().allow(null),
+  level: Joi.string().allow('', null),
+  type: Joi.string().allow('', null),
 });
 
 const departure = Joi.object({
@@ -89,6 +91,8 @@ const basePricing = Joi.object({
   adult: Joi.number().min(0).allow(null),
   child: Joi.number().min(0).allow(null),
   infant: Joi.number().min(0).allow(null),
+  taxPercent: Joi.number().min(0).allow(null),
+  taxAmount: Joi.number().min(0).allow(null),
 });
 
 const seasonalPricing = Joi.object({
@@ -202,11 +206,10 @@ const tourBody = {
     .valid(...departureTypes)
     .allow('', null),
   departures: Joi.array().items(departure),
-  pricingPolicy,
   basePricing,
   seasonalPricing: Joi.array().items(seasonalPricing),
-  sharingType: Joi.string().allow('', null),
-  validSharingTypes: Joi.array().items(Joi.string()),
+  sharingType: Joi.string().trim().custom(objectId).allow('', null),
+  pricingPolicy,
   faqs: Joi.array().items(faq),
   itinerary: Joi.array().items(itineraryDay),
   startDate: Joi.date().allow('', null),
@@ -230,7 +233,7 @@ const tourBody = {
   tourCategory: Joi.string()
     .valid(...Object.values(TOUR_CATEGORY))
     .allow('', null),
-  paymentPlan: Joi.string().allow('', null),
+  paymentPlan: Joi.string().trim().allow('', null),
   refundPolicy: Joi.string().allow('', null),
   paymentPolicy: Joi.string().allow('', null),
   cancellationPolicy: Joi.string().allow('', null),

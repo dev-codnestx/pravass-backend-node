@@ -4,6 +4,7 @@ import { Schema, Types, model } from 'mongoose';
 
 import { TOUR_CATEGORY } from '@/shared/constants/enum.constant.js';
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
+import { slugifyPlugin } from '@/shared/utils/plugins/slugify.plugin.js';
 
 import {
   departureFlightTypes,
@@ -57,6 +58,10 @@ const seatStateSchema = new Schema(
     status: { type: String, enum: seatStatuses, default: 'available' },
     row: { type: Number },
     column: { type: Number },
+    level: { type: String, trim: true },
+    type: { type: String, trim: true },
+    bookingId: { type: Schema.Types.ObjectId, ref: 'Booking' },
+    passengerName: { type: String, trim: true },
   },
   { _id: false },
 );
@@ -65,7 +70,7 @@ const departureSchema = new Schema(
   {
     id: { type: String, trim: true },
     cityId: { type: Types.ObjectId, ref: 'MasterDepartureCity' },
-    cityIds: [{ type: String, trim: true }],
+    cityIds: [{ type: Types.ObjectId, ref: 'MasterDepartureCity' }],
     startDate: { type: Date },
     endDate: { type: Date },
     transportMode: { type: String, enum: departureTransportModes },
@@ -103,6 +108,8 @@ const basePricingSchema = new Schema(
     adult: { type: Number, min: 0 },
     child: { type: Number, min: 0 },
     infant: { type: Number, min: 0 },
+    taxPercent: { type: Number, min: 0, default: 0 },
+    taxAmount: { type: Number, min: 0, default: 0 },
   },
   { _id: false },
 );
@@ -185,7 +192,6 @@ const tourSettingsSchema = new Schema(
 const tourSchema = new Schema<ITourDoc, ITourModel>(
   {
     name: { type: String, required: true, trim: true, index: true },
-    slug: { type: String, trim: true, lowercase: true, index: true },
     code: { type: String, trim: true, uppercase: true, index: true },
     destinationIds: { type: [Types.ObjectId], ref: 'MasterDestination', default: [] },
     continentId: { type: Types.ObjectId, ref: 'Continent', trim: true },
@@ -215,8 +221,7 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     pricingPolicy: pricingPolicySchema,
     basePricing: basePricingSchema,
     seasonalPricing: [seasonalPricingSchema],
-    sharingType: { type: String, trim: true },
-    validSharingTypes: [{ type: String, trim: true }],
+    sharingType: { type: Types.ObjectId, ref: 'MasterSharingType', index: true },
     faqs: [faqSchema],
     itinerary: [itineraryDaySchema],
     startDate: { type: Date },
@@ -336,13 +341,16 @@ tourSchema.pre('validate', function normalizeTour() {
 
   if (Array.isArray(draft.activityIds)) draft.activityIds = uniqueTrimmedStrings(draft.activityIds);
 
-  if (Array.isArray(draft.validSharingTypes)) draft.validSharingTypes = uniqueTrimmedStrings(draft.validSharingTypes);
+  if (draft.sharingType && Types.ObjectId.isValid(String(draft.sharingType).trim()))
+    draft.sharingType = new Types.ObjectId(String(draft.sharingType).trim());
+
+  if (draft.paymentPlan) draft.paymentPlan = String(draft.paymentPlan).trim();
 
   if (Array.isArray(draft.seasonalPricing))
     draft.seasonalPricing = draft.seasonalPricing.filter((season, index, arr) => {
-      if (!season?.startDate || !season?.endDate) return true;
+      if (!season?.startDate || !season?.endDate) return false;
       const current = toSeasonKey(season.startDate, season.endDate);
-      if (!current) return true;
+      if (!current) return false;
       return (
         arr.findIndex((entry) => {
           if (!entry?.startDate || !entry?.endDate) return false;
@@ -483,6 +491,7 @@ tourSchema.index({ name: 'text', description: 'text' });
 
 tourSchema.plugin(toJSON);
 tourSchema.plugin(paginate);
+tourSchema.plugin(slugifyPlugin, { sourceField: 'name', targetField: 'slug' });
 
 export const TourModel = model<ITourDoc, ITourModel>('Tour', tourSchema);
 export default TourModel;

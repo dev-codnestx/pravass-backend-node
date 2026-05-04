@@ -217,11 +217,11 @@ const normalizeItinerary = (rawItinerary: unknown): ITour['itinerary'] | undefin
   return normalized.length > 0 ? normalized : undefined;
 };
 
-const normalizeDepartures = (rawDepartures: unknown): ITour['departures'] | undefined => {
+const normalizeDepartures = async (rawDepartures: unknown): Promise<ITour['departures'] | undefined> => {
   if (!Array.isArray(rawDepartures)) return undefined;
 
-  const normalized = rawDepartures
-    .map((entry) => {
+  const normalized = await Promise.all(
+    rawDepartures.map(async (entry) => {
       if (!entry || typeof entry !== 'object') return null;
       const item = entry as Record<string, unknown>;
 
@@ -244,14 +244,33 @@ const normalizeDepartures = (rawDepartures: unknown): ITour['departures'] | unde
         }),
       );
 
-      const seatStates = (Array.isArray(item.seatStates) ? item.seatStates : []).map((seat: any) =>
+      let seatStates = (Array.isArray(item.seatStates) ? item.seatStates : []).map((seat: any) =>
         sanitizeDeep({
           seat_no: toTrimmedString(seat.seat_no),
           status: toTrimmedString(seat.status),
           row: typeof seat.row === 'number' ? seat.row : undefined,
           column: typeof seat.column === 'number' ? seat.column : undefined,
+          level: toTrimmedString(seat.level),
+          type: toTrimmedString(seat.type),
         }),
       );
+
+      const vehicleId = toTrimmedString(item.vehicleId);
+
+      // If seatStates is empty but vehicleId is provided, pull from MasterVehicle
+      if (seatStates.length === 0 && vehicleId && mongoose.Types.ObjectId.isValid(vehicleId)) {
+        const vehicle = await masterModels.vehicles.findById(vehicleId).lean();
+        const layout = (vehicle as any)?.seatLayout;
+        if (layout && Array.isArray(layout.seats))
+          seatStates = layout.seats.map((s: any) => ({
+            seat_no: s.seat_no || s.number,
+            status: s.status || 'available',
+            row: s.row,
+            column: s.column,
+            level: s.level,
+            type: s.type,
+          }));
+      }
 
       const departureCities = (Array.isArray(item.departureCities) ? item.departureCities : []).map((cityEntry: any) =>
         sanitizeDeep({
@@ -275,7 +294,7 @@ const normalizeDepartures = (rawDepartures: unknown): ITour['departures'] | unde
         transportTypeId: toTrimmedString(item.transportTypeId),
         transportId: toTrimmedString(item.transportId) ?? toTrimmedString(item.transport_id),
         transport_id: toTrimmedString(item.transport_id) ?? toTrimmedString(item.transportId),
-        vehicleId: toTrimmedString(item.vehicleId),
+        vehicleId,
         seats: typeof item.seats === 'number' ? item.seats : undefined,
         price: typeof item.price === 'number' ? item.price : undefined,
         joiningLeavingAllowed: typeof item.joiningLeavingAllowed === 'boolean' ? item.joiningLeavingAllowed : undefined,
@@ -292,10 +311,11 @@ const normalizeDepartures = (rawDepartures: unknown): ITour['departures'] | unde
       });
 
       return normalizedDeparture as IDeparture;
-    })
-    .filter(Boolean) as IDeparture[];
+    }),
+  );
 
-  return normalized.length > 0 ? normalized : undefined;
+  const filtered = normalized.filter(Boolean) as IDeparture[];
+  return filtered.length > 0 ? filtered : undefined;
 };
 
 const applyPolicyAliases = (payload: Record<string, unknown>) => {
@@ -395,8 +415,9 @@ const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<I
       // It's already the new structure or mixed, let it be for now or handle as needed
       mutableBody.departureCities = departureCities;
 
-  const departures = normalizeDepartures(mutableBody.departures);
+  const departures = await normalizeDepartures(mutableBody.departures);
   if (departures) {
+    // eslint-disable-next-line require-atomic-updates
     mutableBody.departures = departures;
 
     // Auto-populate root departureCities from departures.cityIds
@@ -407,15 +428,19 @@ const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<I
     }
   } else if (Array.isArray(mutableBody.batches) && mutableBody.batches.length > 0) {
     // Map batches to departures if no explicit departures are provided
-    mutableBody.departures = normalizeDepartures(
-      mutableBody.batches.map((batch: Record<string, unknown>) => ({
-        id: toTrimmedString(batch.id),
-        startDate: batch.date,
-        transportMode: mutableBody.transportType || 'BUS', // Fallback to BUS
-        vehicleId: mutableBody.vehicleId,
-        price: mutableBody.price,
-      })),
-    );
+    // Capture dependencies into a local variable before the await to prevent drift/race conditions
+    const batchMappingInput = mutableBody.batches.map((batch: any) => ({
+      id: batch.id,
+      startDate: batch.date,
+      transportMode: mutableBody.transportType || 'BUS', // Fallback to BUS
+      vehicleId: mutableBody.vehicleId,
+      price: mutableBody.price,
+    }));
+
+    const normalizedBatches = await normalizeDepartures(batchMappingInput);
+    if (normalizedBatches)
+      // eslint-disable-next-line require-atomic-updates
+      mutableBody.departures = normalizedBatches;
   }
 
   const inclusionIds = Array.isArray(mutableBody.inclusionIds) ? uniqueStrings(mutableBody.inclusionIds) : [];
@@ -426,26 +451,19 @@ const normalizeTourPayload = async (tourBody: Partial<ITour>): Promise<Partial<I
 
   if (mutableBody.basePricing && typeof mutableBody.basePricing === 'object') {
     const basePricing = mutableBody.basePricing as Record<string, unknown>;
-    mutableBody.basePricing = sanitizeDeep({
-      adult:
-        typeof basePricing.adult === 'number'
-          ? basePricing.adult
-          : toTrimmedString(basePricing.adult)
-            ? Number(basePricing.adult)
-            : undefined,
-      child:
-        typeof basePricing.child === 'number'
-          ? basePricing.child
-          : toTrimmedString(basePricing.child)
-            ? Number(basePricing.child)
-            : undefined,
-      infant:
-        typeof basePricing.infant === 'number'
-          ? basePricing.infant
-          : toTrimmedString(basePricing.infant)
-            ? Number(basePricing.infant)
-            : undefined,
-    }) as ITour['basePricing'];
+    const bp: any = {};
+    if (basePricing.adult !== undefined)
+      bp.adult = typeof basePricing.adult === 'number' ? basePricing.adult : Number(basePricing.adult);
+    if (basePricing.child !== undefined)
+      bp.child = typeof basePricing.child === 'number' ? basePricing.child : Number(basePricing.child);
+    if (basePricing.infant !== undefined)
+      bp.infant = typeof basePricing.infant === 'number' ? basePricing.infant : Number(basePricing.infant);
+    if (basePricing.taxPercent !== undefined)
+      bp.taxPercent = typeof basePricing.taxPercent === 'number' ? basePricing.taxPercent : Number(basePricing.taxPercent);
+    if (basePricing.taxAmount !== undefined)
+      bp.taxAmount = typeof basePricing.taxAmount === 'number' ? basePricing.taxAmount : Number(basePricing.taxAmount);
+
+    mutableBody.basePricing = sanitizeDeep(bp) as ITour['basePricing'];
   }
 
   if (Array.isArray(mutableBody.seasonalPricing))
@@ -630,22 +648,48 @@ const searchFlightsByAirline = async (airline: string): Promise<FlightLookupSugg
 };
 
 const getTourById = async (id: string, options?: { populate?: string; fields?: string }): Promise<ITourDoc | null> => {
+  let tour: ITourDoc | null = null;
   if (options && (options.populate || options.fields))
     try {
-      const tour = await getEntityByIdWithQueryString({
+      tour = await getEntityByIdWithQueryString({
         model: TourModel,
         entityId: id,
         populate: options.populate,
         fields: options.fields,
       });
-      if (tour.isDeleted) return null;
-      return tour;
     } catch (err: any) {
       if (err.statusCode === 200 || err.statusCode === 404) return null;
       throw err;
     }
+  else tour = await TourModel.findOne({ _id: id, isDeleted: false });
 
-  return TourModel.findOne({ _id: id, isDeleted: false });
+  if (!tour || tour.isDeleted) return null;
+
+  // Professional On-the-fly Population:
+  // If departures have vehicleId but NO seatStates, populate them from MasterVehicle
+  if (Array.isArray(tour.departures))
+    await Promise.all(
+      tour.departures.map(async (dep) => {
+        if ((!dep.seatStates || dep.seatStates.length === 0) && dep.vehicleId) {
+          const vehicle = await masterModels.vehicles.findById(dep.vehicleId).lean();
+          const layout = (vehicle as any)?.seatLayout;
+          if (layout && Array.isArray(layout.seats)) {
+            const mappedSeats = layout.seats.map((s: any) => ({
+              seat_no: s.seat_no || s.number,
+              status: s.status || 'available',
+              row: s.row,
+              column: s.column,
+              level: s.level,
+              type: s.type,
+            }));
+            // eslint-disable-next-line require-atomic-updates
+            dep.seatStates = mappedSeats;
+          }
+        }
+      }),
+    );
+
+  return tour;
 };
 
 const updateTourById = async (tourId: string, updateBody: Partial<ITour>): Promise<ITourDoc | null> => {

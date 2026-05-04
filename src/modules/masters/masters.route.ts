@@ -8,6 +8,9 @@ import { mastersValidation } from '@/modules/masters/masters.validation.js';
 import { AuditMode } from '@/shared/constants/enum.constant.js';
 import { setAuditFields } from '@/shared/middleware/setAuditFields.js';
 import { validateMiddleware } from '@/shared/utils/middlewares/index.js';
+import { validateVehicleUsage } from '@/modules/masters/middlewares/validateVehicleUsage.js';
+import catchAsync from '@/shared/utils/catchAsync.js';
+import { TourModel } from '@/modules/tours/tour.model.js';
 
 const router: Router = express.Router();
 
@@ -45,11 +48,29 @@ MASTER_MODULES.forEach((moduleKey) => {
     )
     .put(
       authMiddleware(),
+      (req, res, next) => {
+        if (moduleKey === 'vehicles') return validateVehicleUsage(req, res, next);
+
+        next();
+      },
       validateMiddleware(mastersValidation.updateMaster),
       setAuditFields({ mode: AuditMode.UPDATE }),
       controller.update,
     )
     .delete(authMiddleware(), validateMiddleware(mastersValidation.deleteMaster), controller.remove);
+
+  if (moduleKey === 'vehicles')
+    router.get(
+      `${modulePath}/:id/usage`,
+      authMiddleware(),
+      catchAsync(async (req, res) => {
+        const isUsed = await TourModel.exists({
+          'departures.vehicleId': req.params.id,
+          isDeleted: false,
+        });
+        res.success({ isUsed: !!isUsed });
+      }),
+    );
 });
 
 export default router;

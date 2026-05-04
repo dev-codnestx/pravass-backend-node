@@ -57,3 +57,30 @@ export enum TOUR_CATEGORY {
   DOMESTIC = 'domestic',
   INTERNATIONAL = 'international',
 }
+
+export enum BOOKING_STATUS {
+  PENDING = 'pending',
+  CONFIRMED = 'confirmed',
+  CANCELLED = 'cancelled',
+  FAILED = 'failed',
+  PARTIALLY_PAID = 'partially_paid',
+  COMPLETED = 'completed',
+  REFUNDED = 'refunded',
+}
+
+export enum SEAT_STATUS {
+  AVAILABLE = 'available',
+  BOOKED = 'booked',
+  BLOCKED = 'blocked',
+  AISLE = 'aisle',
+  HIDDEN = 'hidden',
+  FEMALE_BOOKED = 'femaleBooked',
+}
+
+export enum PAYMENT_STATUS {
+  PENDING = 'pending',
+  PAID = 'paid',
+  FAILED = 'failed',
+  REFUNDED = 'refunded',
+  PARTIAL = 'partial',
+}

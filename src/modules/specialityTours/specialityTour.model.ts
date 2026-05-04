@@ -1,6 +1,7 @@
 import { Schema, Types, model } from 'mongoose';
 
 import { paginate, toJSON } from '@/shared/utils/plugins/index.js';
+import { slugifyPlugin } from '@/shared/utils/plugins/slugify.plugin.js';
 
 import { ISpecialityTourDoc, ISpecialityTourModel, specialityTourStatuses } from './specialityTour.interfaces.js';
 
@@ -15,7 +16,6 @@ const packageLinkSchema = new Schema(
 const specialityTourSchema = new Schema<ISpecialityTourDoc, ISpecialityTourModel>(
   {
     title: { type: String, required: true, trim: true, index: true },
-    slug: { type: String, required: true, trim: true, lowercase: true, index: true },
     description: { type: String, trim: true, default: '' },
     banner: { type: String, trim: true, default: '' },
     status: {
@@ -37,8 +37,6 @@ specialityTourSchema.index({ slug: 1 }, { unique: true });
 
 specialityTourSchema.pre('validate', function normalizeSpecialityTour() {
   const draft = this as ISpecialityTourDoc;
-
-  if (typeof draft.slug === 'string') draft.slug = draft.slug.trim().toLowerCase();
   if (typeof draft.title === 'string') draft.title = draft.title.trim();
 
   if (Array.isArray(draft.packages)) {
@@ -69,6 +67,7 @@ specialityTourSchema.pre('validate', function normalizeSpecialityTour() {
 
 specialityTourSchema.plugin(toJSON);
 specialityTourSchema.plugin(paginate);
+specialityTourSchema.plugin(slugifyPlugin, { sourceField: 'title', targetField: 'slug' });
 
 specialityTourSchema.statics.isSlugTaken = async function isSlugTaken(slug: string, excludeId?: string) {
   const existing = await this.findOne({ slug: slug.trim().toLowerCase(), _id: { $ne: excludeId } });

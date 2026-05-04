@@ -137,9 +137,9 @@ export const deleteTicketById = async (ticketId: string): Promise<ISupportDoc | 
  * Get support statistics
  * @returns {Promise<Object>}
  */
-export const getSupportStats = async () => {
+export const getSupportStats = async (filter: Record<string, any> = {}) => {
   const stats = await SupportModel.aggregate([
-    { $match: { isDeleted: false } },
+    { $match: { isDeleted: false, ...filter } },
     {
       $group: {
         _id: null,

@@ -24,6 +24,9 @@ router
     customerController.getCustomers,
   );
 
+router.get('/wishlist', authMiddleware(), customerController.getWishlist);
+router.post('/wishlist/toggle', authMiddleware(), customerController.toggleWishlist);
+
 router
   .route('/:customerId')
   .get(authMiddleware('customers:read'), validateMiddleware(customerValidation.getCustomer), customerController.getCustomer)

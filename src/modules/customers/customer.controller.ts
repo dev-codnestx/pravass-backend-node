@@ -9,6 +9,7 @@ import { PaginateOptions } from '@/shared/utils/plugins/paginate/paginate.js';
 import responseCodes from '@/shared/utils/responseCode/responseCode.js';
 
 import { customerService } from './customer.service.js';
+import UserModel from '@/modules/user/user.model.js';
 
 const assertValidCustomerId = (customerId: unknown) => {
   if (typeof customerId !== 'string' || !mongoose.Types.ObjectId.isValid(customerId))
@@ -84,6 +85,36 @@ const deleteCustomer = catchAsync(async (req: Request, res: Response) => {
   return res.success(null, responseCodes.CustomerResponseCodes.SUCCESS, 'Customer deleted successfully');
 });
 
+const toggleWishlist = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?._id || req.user?.id;
+  const user = await UserModel.findById(userId);
+  if (!user) throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+
+  const tourId = req.body.tourId;
+  const tourObjectId = new mongoose.Types.ObjectId(tourId);
+  const wishlist = user.wishlist || [];
+  const index = wishlist.findIndex((id) => id.toString() === tourId);
+
+  if (index === -1) wishlist.push(tourObjectId);
+  else wishlist.splice(index, 1);
+
+  user.wishlist = wishlist;
+  await user.save();
+
+  return res.success(user.wishlist, responseCodes.CustomerResponseCodes.SUCCESS, 'Wishlist updated successfully');
+});
+
+const getWishlist = catchAsync(async (req: Request, res: Response) => {
+  const userId = req.user?._id || req.user?.id;
+  const user = await UserModel.findById(userId).populate({
+    path: 'wishlist',
+    populate: { path: 'tourType' },
+  });
+  if (!user) throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
+
+  return res.success(user.wishlist || [], responseCodes.CustomerResponseCodes.SUCCESS, 'Wishlist fetched successfully');
+});
+
 export const customerController = {
   createCustomer,
   getCustomers,
@@ -91,4 +122,6 @@ export const customerController = {
   updateCustomer,
   updateCustomerStatus,
   deleteCustomer,
+  toggleWishlist,
+  getWishlist,
 };

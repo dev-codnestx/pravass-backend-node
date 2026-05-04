@@ -13,6 +13,7 @@ export interface ICustomer {
   address?: string;
   birthdate?: string;
   profileImage?: string;
+  wishlist: Types.ObjectId[];
   status: CustomerStatus;
   isDeleted: boolean;
   createdBy?: Types.ObjectId;
@@ -51,6 +52,7 @@ export interface UpdateCustomerBody {
   address?: string;
   birthdate?: string;
   profileImage?: string;
+  wishlist?: Types.ObjectId[] | string[];
 }
 
 export interface CreateCustomerResult {

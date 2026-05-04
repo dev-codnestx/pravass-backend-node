@@ -1,13 +1,14 @@
 import { Document, Model, Types } from 'mongoose';
 
 import { QueryResult } from '@/shared/utils/plugins/paginate/paginate.js';
+import { SEAT_STATUS } from '@/shared/constants/enum.constant.js';
 
 export const tourStatuses = ['active', 'draft', 'archived'] as const;
 export const tourDifficulties = ['Easy', 'Moderate', 'Challenging'] as const;
 export const tourMediaTypes = ['image', 'video', 'document'] as const;
 export const departureTypes = ['FIXED', 'FLEXIBLE'] as const;
-export const departureTransportModes = ['BUS', 'FLIGHT', 'TRAIN'] as const;
-export const seatStatuses = ['available', 'booked', 'blocked'] as const;
+export const departureTransportModes = ['BUS', 'FLIGHT', 'TRAIN', 'CAR'] as const;
+export const seatStatuses = Object.values(SEAT_STATUS) as string[];
 export const departureFlightTypes = ['DIRECT', '1 STOP', '2 STOP'] as const;
 
 export type TourStatus = (typeof tourStatuses)[number];
@@ -15,7 +16,7 @@ export type TourDifficulty = (typeof tourDifficulties)[number];
 export type TourMediaType = (typeof tourMediaTypes)[number];
 export type DepartureType = (typeof departureTypes)[number];
 export type DepartureTransportMode = (typeof departureTransportModes)[number];
-export type SeatStatus = (typeof seatStatuses)[number];
+export type SeatStatus = SEAT_STATUS;
 export type DepartureFlightType = (typeof departureFlightTypes)[number];
 
 export interface IDepartureJoiningLeavingPoint {
@@ -48,12 +49,14 @@ export interface ISeatState {
   status: SeatStatus;
   row?: number;
   column?: number;
+  level?: string;
+  type?: string;
 }
 
 export interface IDeparture {
   id?: string;
   cityId?: string;
-  cityIds?: string[];
+  cityIds?: Types.ObjectId[];
   startDate?: Date;
   endDate?: Date;
   transportMode?: DepartureTransportMode;
@@ -85,6 +88,8 @@ export interface IBasePricing {
   adult?: number;
   child?: number;
   infant?: number;
+  taxPercent?: number;
+  taxAmount?: number;
 }
 
 export interface ISeasonalPricing {
@@ -160,8 +165,7 @@ export interface ITour {
   pricingPolicy?: IPricingPolicy;
   basePricing?: IBasePricing;
   seasonalPricing?: ISeasonalPricing[];
-  sharingType?: string;
-  validSharingTypes?: string[];
+  sharingType?: Types.ObjectId;
   faqs?: ITourFaq[];
   itinerary?: IItineraryDay[];
   startDate?: Date;
