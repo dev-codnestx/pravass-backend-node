@@ -1,4 +1,4 @@
-import { model, Schema, type Document, type Model } from 'mongoose';
+import { model, Schema, Types, type Document, type Model } from 'mongoose';
 
 import {
   applyMasterBasePlugin,
@@ -13,8 +13,8 @@ import { TOUR_CATEGORY } from '@/shared/constants/enum.constant.js';
 export interface IMasterDoc extends Document {
   name: string;
   status: MasterStatus;
-  createdBy: Schema.Types.ObjectId;
-  updatedBy: Schema.Types.ObjectId;
+  createdBy: Types.ObjectId;
+  updatedBy: Types.ObjectId;
   deletedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;

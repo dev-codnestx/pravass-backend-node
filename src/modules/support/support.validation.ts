@@ -5,9 +5,12 @@ import { MessageFrom, TicketPriority, TicketStatus } from './support.constants.j
 import { objectId } from '@/shared/validations/custom.validation.js';
 
 const createTicket = {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  body: generateJoiValidation(SupportModel.schema as any).append({
+  body: Joi.object().keys({
+    subject: Joi.string().required(),
+    category: Joi.string().required(),
     message: Joi.string().required(),
+    priority: Joi.string().valid(...Object.values(TicketPriority)),
+    attachments: Joi.array().items(Joi.string()),
   }),
 };
 

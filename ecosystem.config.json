@@ -1,6 +1,19 @@
 {
     "apps": [
     {
+<<<<<<< HEAD
+      "name": "pravass-backend",
+      "script": "dist/index.js",
+      "node_args": "--experimental-modules --es-module-specifier-resolution=node",
+      "instances": 1,
+      "autorestart": true,
+      "watch": false,
+      "time": true,
+      "env": {
+        "NODE_ENV": "production",
+        "PORT": 10000
+      }
+=======
     "name": "pravass-backend",
     "script": "dist/index.js",
     "node_args": "--experimental-modules --es-module-specifier-resolution=node",
@@ -11,6 +24,7 @@
     "env": {
         "NODE_ENV": "production",
         "PORT": 10000
+>>>>>>> 9840e911e01725f5d50967a8ac6546218ff152df
     }
   }
  ]

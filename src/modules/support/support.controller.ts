@@ -11,7 +11,7 @@ export const createTicket = catchAsync(async (req: Request, res: Response) => {
     customer: req.user?._id || req.user?.id,
     customerName: req.user?.fullName || req.user?.firstName || 'User',
   });
-  res.status(httpStatus.CREATED).send(ticket);
+  return res.success(ticket, httpStatus.CREATED, 'Ticket created successfully');
 });
 
 export const getTickets = catchAsync(async (req: Request, res: Response) => {
@@ -36,19 +36,19 @@ export const getTickets = catchAsync(async (req: Request, res: Response) => {
 
   const result = await supportService.queryTickets(filter, options);
   const stats = await supportService.getSupportStats(statsFilter);
-  res.send({ ...result, stats });
+  return res.success({ ...result, stats }, httpStatus.OK, 'Tickets fetched successfully');
 });
 
 export const getTicket = catchAsync(async (req: Request, res: Response) => {
   const ticket = await supportService.getTicketById(req.params.ticketId);
   if (!ticket) throw new ApiError(httpStatus.NOT_FOUND, 'Ticket not found');
 
-  res.send(ticket);
+  return res.success(ticket, httpStatus.OK, 'Ticket fetched successfully');
 });
 
 export const updateTicket = catchAsync(async (req: Request, res: Response) => {
   const ticket = await supportService.updateTicketById(req.params.ticketId, req.body);
-  res.send(ticket);
+  return res.success(ticket, httpStatus.OK, 'Ticket updated successfully');
 });
 
 export const addReply = catchAsync(async (req: Request, res: Response) => {
@@ -58,15 +58,15 @@ export const addReply = catchAsync(async (req: Request, res: Response) => {
     time: new Date(),
   };
   const ticket = await supportService.addReply(req.params.ticketId, messageData);
-  res.send(ticket);
+  return res.success(ticket, httpStatus.OK, 'Reply added successfully');
 });
 
 export const addInternalNote = catchAsync(async (req: Request, res: Response) => {
   const ticket = await supportService.addInternalNote(req.params.ticketId, req.body.note);
-  res.send(ticket);
+  return res.success(ticket, httpStatus.OK, 'Internal note added successfully');
 });
 
 export const deleteTicket = catchAsync(async (req: Request, res: Response) => {
   await supportService.deleteTicketById(req.params.ticketId);
-  res.status(httpStatus.NO_CONTENT).send();
+  return res.success(null, httpStatus.NO_CONTENT, 'Ticket deleted successfully');
 });

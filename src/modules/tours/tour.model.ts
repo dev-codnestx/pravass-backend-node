@@ -192,6 +192,7 @@ const tourSettingsSchema = new Schema(
 const tourSchema = new Schema<ITourDoc, ITourModel>(
   {
     name: { type: String, required: true, trim: true, index: true },
+    slug: { type: String, trim: true, lowercase: true, index: true },
     code: { type: String, trim: true, uppercase: true, index: true },
     destinationIds: { type: [Types.ObjectId], ref: 'MasterDestination', default: [] },
     continentId: { type: Types.ObjectId, ref: 'Continent', trim: true },
@@ -255,6 +256,7 @@ const tourSchema = new Schema<ITourDoc, ITourModel>(
     policies: tourPoliciesSchema,
     settings: tourSettingsSchema,
     highlights: { type: [String], trim: true },
+    isFeatured: { type: Boolean, default: false, index: true },
   },
   {
     timestamps: true,

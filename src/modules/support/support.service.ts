@@ -13,11 +13,14 @@ import UserModel from '../user/user.model.js';
  */
 export const createTicket = async (ticketBody: Partial<ISupportDoc>): Promise<ISupportDoc> => {
   // Generate Ticket ID (e.g., TKT-1001)
-  const lastTicket = await SupportModel.findOne({ ticketId: { $regex: /^TKT-/ } }).sort({ createdAt: -1 });
+  const lastTicket = await SupportModel.findOne({ ticketId: { $regex: /^TKT-/ } }).sort({ createdAt: -1, _id: -1 });
   let nextId = 1001;
   if (lastTicket && lastTicket.ticketId) {
-    const lastId = parseInt(lastTicket.ticketId.split('-')[1]);
-    if (!isNaN(lastId)) nextId = lastId + 1;
+    const lastIdStr = lastTicket.ticketId.split('-')[1];
+    if (lastIdStr) {
+      const lastId = parseInt(lastIdStr, 10);
+      if (!isNaN(lastId)) nextId = lastId + 1;
+    }
   }
   ticketBody.ticketId = `TKT-${nextId}`;
 
@@ -27,9 +30,12 @@ export const createTicket = async (ticketBody: Partial<ISupportDoc>): Promise<IS
   // Send creation email to customer
   const customer = await UserModel.findById(ticket.customer);
   if (customer && customer.email)
-    await sendTicketCreationEmail(customer.email, customer.fullName, {
+    sendTicketCreationEmail(customer.email, customer.fullName, {
       ticketId: ticket.ticketId,
       subject: ticket.subject,
+    }).catch((emailError) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send ticket creation email:', emailError);
     });
 
   return ticket;
@@ -94,12 +100,15 @@ export const addReply = async (
   // If agent replies, send email to customer
   const customer = await UserModel.findById(ticket.customer);
   if (customer && customer.email)
-    await sendSupportReplyEmail(
+    sendSupportReplyEmail(
       customer.email,
       customer.fullName,
       { ticketId: ticket.ticketId, subject: ticket.subject },
       messageData.message,
-    );
+    ).catch((emailError) => {
+      // eslint-disable-next-line no-console
+      console.error('Failed to send support reply email:', emailError);
+    });
 
   await ticket.save();
   return ticket;

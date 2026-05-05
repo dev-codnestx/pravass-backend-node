@@ -21,6 +21,8 @@ import customerRoute from '@/modules/customers/customer.route.js';
 import notificationRoute from '@/modules/notifications/notification.route.js';
 
 import bookingRoute from '@/modules/bookings/booking.route.js';
+import homepageRoute from '@/modules/homepage/homepage.route.js';
+import transactionRoute from '@/modules/transactions/transaction.route.js';
 
 const router = express.Router();
 
@@ -110,6 +112,14 @@ const setupRoutes = () => {
     {
       path: '/notifications',
       route: notificationRoute,
+    },
+    {
+      path: '/homepage',
+      route: homepageRoute,
+    },
+    {
+      path: '/transactions',
+      route: transactionRoute,
     },
   ];
 

@@ -34,25 +34,56 @@ const toObjectIdOrNull = (value: unknown): Types.ObjectId | null => {
   return parsed instanceof Types.ObjectId ? parsed : null;
 };
 
-const resolveMasterIdByName = async (
-  model: (typeof masterModels)['lead-stages'],
+const getSystemUser = async () => {
+  const admin = await masterModels.locations.db
+    .model('User')
+    .findOne({ userType: { $in: ['superadmin', 'admin'] } })
+    .select('_id')
+    .lean();
+  return admin?._id;
+};
+
+const resolveOrCreateMasterIdByName = async (
+  model: (typeof masterModels)['lead-sources'],
   name: unknown,
+  actor?: { userId?: string; userName?: string },
+  options: { allowCreate?: boolean } = { allowCreate: true },
 ): Promise<Types.ObjectId | null> => {
   const normalized = String(name ?? '').trim();
   if (!normalized) return null;
 
-  const entity = await model
+  const existing = await model
     .findOne({ name: { $regex: `^${escapeRegex(normalized)}$`, $options: 'i' }, deletedAt: null })
     .select('_id')
     .lean();
 
-  return entity && entity._id instanceof Types.ObjectId ? entity._id : null;
+  if (existing) return existing._id instanceof Types.ObjectId ? existing._id : null;
+
+  if (!options.allowCreate) return null;
+
+  // Create new if not found
+  const systemUserId = await getSystemUser();
+  const createdBy = actor?.userId && Types.ObjectId.isValid(actor.userId) ? new Types.ObjectId(actor.userId) : systemUserId;
+
+  if (!createdBy) return null; // Cannot create without a valid user ref
+
+  const created = await (model as any).create({
+    name: normalized,
+    status: 'active',
+    createdBy,
+    updatedBy: createdBy,
+  });
+
+  return created?._id || null;
 };
 
-const resolveLeadStageData = async (payload: {
-  leadStageId?: unknown;
-  category?: unknown;
-}): Promise<{ leadStageId?: Types.ObjectId; category: string }> => {
+const resolveLeadStageData = async (
+  payload: {
+    leadStageId?: unknown;
+    category?: unknown;
+  },
+  actor?: { userId?: string; userName?: string },
+): Promise<{ leadStageId?: Types.ObjectId; category: string }> => {
   const requestedCategory = String(payload.category ?? '').trim();
   const requestedLeadStageId = payload.leadStageId;
 
@@ -76,16 +107,10 @@ const resolveLeadStageData = async (payload: {
       category: 'New',
     };
 
-  const matchedStage = await masterModels['lead-stages']
-    .findOne({
-      name: { $regex: `^${escapeRegex(category)}$`, $options: 'i' },
-      deletedAt: null,
-    })
-    .select('_id')
-    .lean();
+  const matchedStageId = await resolveOrCreateMasterIdByName(masterModels['lead-stages'], category, actor);
 
   return {
-    leadStageId: matchedStage && matchedStage._id instanceof Types.ObjectId ? matchedStage._id : undefined,
+    leadStageId: matchedStageId || undefined,
     category,
   };
 };
@@ -99,7 +124,11 @@ const resolveStatusFromCategory = (category: string): LeadStatus => {
   return 'active';
 };
 
-const normalizeLeadPayload = async (payload: Partial<ILead>, isCreate: boolean): Promise<Partial<ILead>> => {
+const normalizeLeadPayload = async (
+  payload: Partial<ILead>,
+  isCreate: boolean,
+  actor?: { userId?: string; userName?: string },
+): Promise<Partial<ILead>> => {
   const next = { ...payload } as Partial<ILead> & Record<string, unknown>;
 
   const hasStageInput =
@@ -107,16 +136,13 @@ const normalizeLeadPayload = async (payload: Partial<ILead>, isCreate: boolean):
     (typeof next.category === 'string' && String(next.category).trim() !== '');
   const stageData =
     isCreate || hasStageInput
-      ? await resolveLeadStageData({
-          leadStageId: next.leadStageId,
-          category: next.category,
-        })
+      ? await resolveLeadStageData({ leadStageId: next.leadStageId, category: next.category }, actor)
       : null;
   if (stageData?.leadStageId) next.leadStageId = stageData.leadStageId;
 
   const sourceId = toObjectIdOrNull(next.sourceId);
   if (!sourceId && typeof next.source === 'string') {
-    const sourceByName = await resolveMasterIdByName(masterModels['lead-sources'], next.source);
+    const sourceByName = await resolveOrCreateMasterIdByName(masterModels['lead-sources'], next.source, actor);
     if (sourceByName) next.sourceId = sourceByName;
   } else if (sourceId) {
     next.sourceId = sourceId;
@@ -140,7 +166,9 @@ const normalizeLeadPayload = async (payload: Partial<ILead>, isCreate: boolean):
 
   const destinationId = toObjectIdOrNull(next.destinationId);
   if (!destinationId && typeof next.destinationInterest === 'string') {
-    const byName = await resolveMasterIdByName(masterModels.destinations, next.destinationInterest);
+    const byName = await resolveOrCreateMasterIdByName(masterModels.destinations, next.destinationInterest, actor, {
+      allowCreate: false,
+    });
     if (byName) next.destinationId = byName;
   } else if (destinationId) {
     next.destinationId = destinationId;
@@ -184,7 +212,7 @@ const normalizeLeadPayload = async (payload: Partial<ILead>, isCreate: boolean):
 };
 
 const createLead = async (leadBody: ILead, actor?: { userId?: string; userName?: string }): Promise<ILeadDoc> => {
-  const payload = await normalizeLeadPayload(leadBody, true);
+  const payload = await normalizeLeadPayload(leadBody, true, actor);
   const activities = Array.isArray(payload.activities) ? payload.activities : [];
   if (activities.length === 0)
     payload.activities = [
@@ -239,7 +267,7 @@ const updateLeadById = async (
   const lead = await getLeadById(leadId);
   if (!lead) throw new ApiError(httpStatus.NOT_FOUND, 'Lead not found');
 
-  const payload = await normalizeLeadPayload(updateBody, false);
+  const payload = await normalizeLeadPayload(updateBody, false, actor);
   const fieldLabels: Record<string, string> = {
     name: 'Name',
     email: 'Email',
@@ -505,7 +533,7 @@ const convertLeadToCustomer = async (
   });
   const customerCreated = conversionResult.created;
 
-  const convertedStage = await resolveMasterIdByName(masterModels['lead-stages'], 'Converted');
+  const convertedStage = await resolveOrCreateMasterIdByName(masterModels['lead-stages'], 'Converted', actor);
   if (convertedStage) lead.leadStageId = convertedStage;
   lead.status = 'converted';
   lead.activities.unshift({
