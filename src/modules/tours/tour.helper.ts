@@ -56,6 +56,28 @@ export const processTourQuery = async (query: Record<string, any>, headers: Reco
     ...(Array.isArray(query.destinationIds) ? query.destinationIds : [query.destinationIds]),
     ...(Array.isArray(query.destination) ? query.destination : [query.destination]),
   ]);
+
+  if (query.zoneId || query.cityId || query.stateId) {
+    const destinationFilter: Record<string, any> = { deletedAt: null };
+
+    if (query.cityId) {
+      destinationFilter.cityId = getObjectId(query.cityId);
+    } else if (query.zoneId) {
+      // Find all cities in this zone
+      const cities = await masterModels.locations
+        .find({ type: 'city', zoneId: getObjectId(query.zoneId), deletedAt: null })
+        .select('_id')
+        .lean();
+      const cityIds = cities.map((c) => c._id);
+      destinationFilter.cityId = { $in: cityIds };
+    } else if (query.stateId) {
+      destinationFilter.stateId = getObjectId(query.stateId);
+    }
+
+    const matchedDestinations = await masterModels.destinations.find(destinationFilter).select('_id').lean();
+    matchedDestinations.forEach((d) => destinationIdsFromQuery.push(d._id));
+  }
+
   if (destinationIdsFromQuery.length > 0) filter.destinationIds = { $in: destinationIdsFromQuery };
 
   if (query.search) {
