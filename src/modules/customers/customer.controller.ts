@@ -108,7 +108,7 @@ const getWishlist = catchAsync(async (req: Request, res: Response) => {
   const userId = req.user?._id || req.user?.id;
   const user = await UserModel.findById(userId).populate({
     path: 'wishlist',
-    populate: { path: 'tourType' },
+    populate: [{ path: 'tourType' }, { path: 'destinationIds' }, { path: 'inclusionIds' }],
   });
   if (!user) throw new ApiError(httpStatus.NOT_FOUND, 'User not found');
 

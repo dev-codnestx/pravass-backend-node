@@ -202,6 +202,7 @@ export interface ITour {
   policies?: ITourPolicies;
   settings?: ITourSettings;
   highlights?: string[];
+  isFeatured?: boolean;
 }
 
 export interface ITourDoc extends ITour, Document {}

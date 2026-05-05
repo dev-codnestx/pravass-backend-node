@@ -118,6 +118,8 @@ const bookingSchema = new Schema<IBookingDoc, IBookingModel>(
 bookingSchema.index({ tourId: 1, status: 1, isDeleted: 1 });
 bookingSchema.index({ customerId: 1, isDeleted: 1 });
 bookingSchema.index({ sourceUserId: 1, isDeleted: 1 });
+bookingSchema.index({ contactEmail: 1, isDeleted: 1 });
+bookingSchema.index({ contactPhone: 1, isDeleted: 1 });
 bookingSchema.index({ 'payment.razorpayOrderId': 1 });
 bookingSchema.index({ departureDate: 1, status: 1 });
 

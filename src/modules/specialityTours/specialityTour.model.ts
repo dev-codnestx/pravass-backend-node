@@ -16,6 +16,7 @@ const packageLinkSchema = new Schema(
 const specialityTourSchema = new Schema<ISpecialityTourDoc, ISpecialityTourModel>(
   {
     title: { type: String, required: true, trim: true, index: true },
+    slug: { type: String, trim: true, lowercase: true, index: true },
     description: { type: String, trim: true, default: '' },
     banner: { type: String, trim: true, default: '' },
     status: {

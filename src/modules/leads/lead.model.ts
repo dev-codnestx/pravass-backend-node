@@ -46,10 +46,10 @@ const leadSchema = new Schema<ILeadDoc, ILeadModel>(
     name: { type: String, trim: true, required: true, index: true },
     email: { type: String, trim: true, lowercase: true },
     phone: { type: String, trim: true, required: true },
-    sourceId: { type: Schema.Types.ObjectId, ref: 'MasterLeadSource', required: true, index: true },
+    sourceId: { type: Schema.Types.ObjectId, ref: 'MasterLeadSource', index: true },
     tourId: { type: Schema.Types.ObjectId, ref: 'Tour' },
     destinationId: { type: Schema.Types.ObjectId, ref: 'MasterDestination' },
-    leadStageId: { type: Schema.Types.ObjectId, ref: 'MasterLeadStage', required: true, index: true },
+    leadStageId: { type: Schema.Types.ObjectId, ref: 'MasterLeadStage', index: true },
     status: {
       type: String,
       enum: LEAD_STATUSES,

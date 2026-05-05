@@ -13,6 +13,8 @@ import { IBookingPriceBreakdown, IBookingDoc } from './booking.interfaces.js';
 import { TourModel } from '../tours/tour.model.js';
 import { customerService } from '../customers/customer.service.js';
 import { BOOKING_STATUS, PAYMENT_STATUS } from '@/shared/constants/enum.constant.js';
+import * as transactionService from '../transactions/transaction.service.js';
+import { TransactionStatus } from '../transactions/transaction.model.js';
 
 const razorpay = new Razorpay({
   /* eslint-disable camelcase */
@@ -100,23 +102,88 @@ export const computePriceBreakdown = (
   };
 };
 
+/**
+ * Synchronizes booking state with Tour departure capacity and seat availability.
+ */
+export const syncBookingWithTour = async (booking: IBookingDoc, previousStatus?: string, isBlocking: boolean = false) => {
+  const tour = await TourModel.findById(booking.tourId);
+  if (!tour) return;
+
+  if (booking.departureId && tour.departures) {
+    const departure = tour.departures.find(
+      (d: any) => d._id?.toString() === booking.departureId || d.id === booking.departureId,
+    );
+
+    if (departure) {
+      const targetStatus = isBlocking ? 'blocked' : 'booked';
+
+      // If status changed to confirmed OR we are just blocking
+      if ((booking.status === BOOKING_STATUS.CONFIRMED && previousStatus !== BOOKING_STATUS.CONFIRMED) || isBlocking) {
+        // Only increment booking count and decrease total seats if confirming (not just blocking)
+        if (!isBlocking && previousStatus !== BOOKING_STATUS.CONFIRMED) {
+          tour.bookings = (tour.bookings || 0) + 1;
+          if (departure.totalSeatsAvailable !== undefined)
+            departure.totalSeatsAvailable = Math.max(0, departure.totalSeatsAvailable - booking.totalTravelers);
+        }
+
+        // Handle specific seat states
+        if (booking.selectedSeats && booking.selectedSeats.length > 0 && departure.seatStates)
+          booking.selectedSeats.forEach((seatNo: string, index: number) => {
+            const seat = (departure.seatStates as any[]).find((s) => s.seat_no === seatNo);
+            if (seat) {
+              seat.status = targetStatus;
+              seat.bookingId = booking._id;
+              if (!isBlocking) seat.passengerName = booking.travelers?.[index]?.fullName || booking.contactName;
+            }
+          });
+      }
+      // If status changed FROM confirmed/blocked TO cancelled/failed
+      else if (
+        (booking.status === BOOKING_STATUS.CANCELLED || booking.status === BOOKING_STATUS.FAILED) &&
+        (previousStatus === BOOKING_STATUS.CONFIRMED || previousStatus === BOOKING_STATUS.PENDING)
+      ) {
+        if (previousStatus === BOOKING_STATUS.CONFIRMED) {
+          tour.bookings = Math.max(0, (tour.bookings || 0) - 1);
+          if (departure.totalSeatsAvailable !== undefined) departure.totalSeatsAvailable += booking.totalTravelers;
+        }
+
+        if (departure.seatStates && (departure.seatStates as any[]).length > 0)
+          (departure.seatStates as any[]).forEach((seat) => {
+            const isMatch =
+              seat.bookingId?.toString() === booking._id.toString() ||
+              (booking.selectedSeats && booking.selectedSeats.includes(seat.seat_no));
+
+            if (isMatch) {
+              seat.status = 'available';
+              seat.bookingId = undefined;
+              seat.passengerName = undefined;
+            }
+          });
+      }
+
+      tour.markModified('departures');
+      await tour.save();
+    }
+  }
+};
+
 export const initiateBooking = async (body: any, sourceUserId?: string) => {
   const tour = await TourModel.findById(body.tourId);
   if (!tour) throw new ApiError(httpStatus.NOT_FOUND, 'Tour not found');
 
   let customerId = body.customerId;
 
-  // Convert user to customer if booking from website (sourceUserId present)
-  if (sourceUserId) {
-    const { customer } = await customerService.createOrGetCustomer({
-      sourceUserId,
-      fullName: body.contactName,
-      email: body.contactEmail,
-      phoneNumber: body.contactPhone,
-      dialCode: body.contactDialCode,
-    });
-    customerId = customer._id;
-  }
+  // Resolve or create customer based on contact info or source user
+  const customerResult = await customerService.createOrGetCustomer({
+    sourceUserId: sourceUserId ? new mongoose.Types.ObjectId(sourceUserId) : undefined,
+    fullName: body.contactName,
+    email: body.contactEmail,
+    phoneNumber: body.contactPhone,
+    dialCode: body.contactDialCode,
+  });
+
+  // If customerId was not provided, use the one from the resolved customer
+  if (!customerId) customerId = customerResult.customer._id;
 
   let departure;
   if (body.departureId) {
@@ -133,7 +200,30 @@ export const initiateBooking = async (body: any, sourceUserId?: string) => {
         'SEATS_UNAVAILABLE',
       );
 
-    // Validate specific seats if provided
+    // Auto-allot seats if not provided and seat states exist
+    if (
+      (!body.selectedSeats || body.selectedSeats.length === 0) &&
+      departure.seatStates &&
+      departure.seatStates.length > 0
+    ) {
+      const availableSeats = (departure.seatStates as any[])
+        .filter((s) => s.status === 'available')
+        .slice(0, totalTravelers)
+        .map((s) => s.seat_no);
+
+      if (availableSeats.length < totalTravelers)
+        throw new ApiError(
+          httpStatus.BAD_REQUEST,
+          'Not enough consecutive seats available',
+          true,
+          undefined,
+          'SEATS_UNAVAILABLE',
+        );
+
+      body.selectedSeats = availableSeats;
+    }
+
+    // Validate specific seats if provided or auto-allotted
     if (body.selectedSeats && body.selectedSeats.length > 0 && departure.seatStates)
       body.selectedSeats.forEach((seatNo: string) => {
         const seat = (departure.seatStates as any[]).find((s) => s.seat_no === seatNo);
@@ -177,8 +267,12 @@ export const initiateBooking = async (body: any, sourceUserId?: string) => {
 
   const booking = new BookingModel({
     ...body,
-    customerId,
-    sourceUserId,
+    customerId: customerId,
+    sourceUserId:
+      body.sourceUserId ||
+      customerResult.customer.sourceUserId ||
+      (sourceUserId ? new mongoose.Types.ObjectId(sourceUserId) : undefined),
+    createdBy: sourceUserId ? new mongoose.Types.ObjectId(sourceUserId) : undefined,
     totalTravelers: body.travelers.length,
     priceBreakdown,
     totalAmount,
@@ -208,6 +302,18 @@ export const initiateBooking = async (body: any, sourceUserId?: string) => {
         receipt: booking.bookingRef,
       });
       booking.payment.razorpayOrderId = razorpayOrder.id;
+
+      // Log transaction attempt
+      await transactionService.createTransaction({
+        bookingId: booking._id,
+        userId: booking.sourceUserId,
+        amount: totalAmount,
+        currency: 'INR',
+        gateway: 'RAZORPAY',
+        gatewayOrderId: razorpayOrder.id,
+        status: TransactionStatus.PENDING,
+        notes: `Initial attempt for booking ${booking.bookingRef}`,
+      });
     } catch (error: any) {
       // Extract detailed message from Razorpay SDK error structure
       const razorpayErrorMessage =
@@ -233,6 +339,9 @@ export const initiateBooking = async (body: any, sourceUserId?: string) => {
     booking.status = BOOKING_STATUS.CONFIRMED;
   }
 
+  // Mark seats as BLOCKED immediately to prevent double booking during checkout
+  if (departure && body.selectedSeats && body.selectedSeats.length > 0) await syncBookingWithTour(booking, undefined, true); // true for blocking mode
+
   await booking.save();
 
   return {
@@ -240,89 +349,6 @@ export const initiateBooking = async (body: any, sourceUserId?: string) => {
     razorpayOrderId: razorpayOrder?.id,
     amount: amountInPaise,
   };
-};
-
-/**
- * Synchronizes booking state with Tour departure capacity and seat availability.
- * This handles incrementing/decrementing total bookings, available seats,
- * and specific seat status mapping (passenger names/booking links).
- */
-export const syncBookingWithTour = async (booking: IBookingDoc, previousStatus?: string) => {
-  const tour = await TourModel.findById(booking.tourId);
-  if (!tour) return;
-
-  if (booking.departureId && tour.departures) {
-    const departure = tour.departures.find(
-      (d: any) => d._id?.toString() === booking.departureId || d.id === booking.departureId,
-    );
-
-    if (departure) {
-      // If status changed to confirmed
-      if (booking.status === BOOKING_STATUS.CONFIRMED && previousStatus !== BOOKING_STATUS.CONFIRMED) {
-        // Increment booking count for the whole tour
-        tour.bookings = (tour.bookings || 0) + 1;
-
-        // Decrease available seats for this departure
-        if (departure.totalSeatsAvailable !== undefined)
-          departure.totalSeatsAvailable = Math.max(0, departure.totalSeatsAvailable - booking.totalTravelers);
-
-        // Mark specific seats as booked and link to this booking
-        if (booking.selectedSeats && booking.selectedSeats.length > 0 && departure.seatStates) {
-          booking.selectedSeats.forEach((seatNo: string, index: number) => {
-            const seat = (departure.seatStates as any[]).find((s) => s.seat_no === seatNo);
-            if (seat) {
-              seat.status = 'booked';
-              seat.bookingId = booking._id;
-              // Assign individual traveler name if available, otherwise fallback to contact name
-              seat.passengerName = booking.travelers?.[index]?.fullName || booking.contactName;
-            }
-          });
-        } else if (departure.seatStates && (departure.seatStates as any[]).length > 0) {
-          // If no specific seats selected (e.g. non-bus transport), mark first N available seats as booked
-          let travelersToAssign = booking.totalTravelers;
-          for (const seat of departure.seatStates as any[]) {
-            if (travelersToAssign <= 0) break;
-            if (seat.status === 'available') {
-              seat.status = 'booked';
-              seat.bookingId = booking._id;
-              seat.passengerName = booking.contactName;
-              travelersToAssign--;
-            }
-          }
-        }
-      }
-      // If status changed FROM confirmed TO cancelled/failed
-      else if (
-        (booking.status === BOOKING_STATUS.CANCELLED || booking.status === BOOKING_STATUS.FAILED) &&
-        previousStatus === BOOKING_STATUS.CONFIRMED
-      ) {
-        // Decrement booking count for the whole tour
-        tour.bookings = Math.max(0, (tour.bookings || 0) - 1);
-
-        // Increase available seats for this departure
-        if (departure.totalSeatsAvailable !== undefined) departure.totalSeatsAvailable += booking.totalTravelers;
-
-        // Release seats linked to this booking
-        if (departure.seatStates && (departure.seatStates as any[]).length > 0)
-          (departure.seatStates as any[]).forEach((seat) => {
-            // Check by bookingId or if it's one of the selected seats (fallback for robustness)
-            const isMatch =
-              seat.bookingId?.toString() === booking._id.toString() ||
-              (booking.selectedSeats && booking.selectedSeats.includes(seat.seat_no));
-
-            if (isMatch) {
-              seat.status = 'available';
-              seat.bookingId = undefined;
-              seat.passengerName = undefined;
-            }
-          });
-      }
-
-      // Force Mongoose to recognize changes in the nested departures array
-      tour.markModified('departures');
-      await tour.save();
-    }
-  }
 };
 
 export const verifyPayment = async (body: {
@@ -347,6 +373,16 @@ export const verifyPayment = async (body: {
     booking.status = BOOKING_STATUS.FAILED;
     await booking.save();
 
+    // Log failed transaction
+    const transaction = await transactionService.getTransactionByOrderId(razorpayOrderId);
+    if (transaction)
+      await transactionService.updateTransactionById(transaction._id.toString(), {
+        status: TransactionStatus.FAILED,
+        gatewayPaymentId: razorpayPaymentId,
+        gatewaySignature: razorpaySignature,
+        errorMessage: 'Payment verification failed: Signature mismatch',
+      });
+
     await sendBookingPaymentFailedEmail(booking).catch(console.error);
 
     throw new ApiError(
@@ -369,6 +405,16 @@ export const verifyPayment = async (body: {
 
     await booking.save();
 
+    // Log successful transaction
+    const transaction = await transactionService.getTransactionByOrderId(razorpayOrderId);
+    if (transaction)
+      await transactionService.updateTransactionById(transaction._id.toString(), {
+        status: TransactionStatus.SUCCESS,
+        gatewayPaymentId: razorpayPaymentId,
+        gatewaySignature: razorpaySignature,
+        paidAt: new Date(),
+      });
+
     // Sync with tour (updates seats and capacity)
     await syncBookingWithTour(booking, previousStatus);
 
@@ -389,7 +435,15 @@ export const queryBookings = async (filter: Record<string, any>, options: Record
 
 export const getBookingById = async (id: string) => {
   const booking = (await BookingModel.findById(id).populate([
-    { path: 'tourId', populate: { path: 'tourType' } },
+    {
+      path: 'tourId',
+      populate: [
+        { path: 'tourType' },
+        { path: 'destinationIds' },
+        { path: 'itinerary.hotelId' },
+        { path: 'itinerary.activityIds' },
+      ],
+    },
     { path: 'customerId' },
     { path: 'sourceUserId' },
     { path: 'departureCityId' },
@@ -401,7 +455,15 @@ export const getBookingById = async (id: string) => {
 
 export const getBookingByRef = async (ref: string) => {
   const booking = (await BookingModel.findOne({ bookingRef: ref }).populate([
-    { path: 'tourId', populate: { path: 'tourType' } },
+    {
+      path: 'tourId',
+      populate: [
+        { path: 'tourType' },
+        { path: 'destinationIds' },
+        { path: 'itinerary.hotelId' },
+        { path: 'itinerary.activityIds' },
+      ],
+    },
     { path: 'customerId' },
     { path: 'sourceUserId' },
     { path: 'departureCityId' },
@@ -427,9 +489,27 @@ export const updateBooking = async (id: string, updateBody: Record<string, any>)
   if (booking.status !== previousStatus) {
     await syncBookingWithTour(booking, previousStatus);
 
-    // If newly confirmed, send email
-    if (booking.status === BOOKING_STATUS.CONFIRMED && previousStatus !== BOOKING_STATUS.CONFIRMED)
+    // If newly confirmed manually, log a transaction for historical record
+    if (booking.status === BOOKING_STATUS.CONFIRMED && previousStatus !== BOOKING_STATUS.CONFIRMED) {
+      const existingSuccess = await transactionService.queryTransactions(
+        { bookingId: booking._id, status: TransactionStatus.SUCCESS },
+        { limit: 1 },
+      );
+
+      if (existingSuccess.totalResults === 0)
+        await transactionService.createTransaction({
+          bookingId: booking._id,
+          userId: booking.sourceUserId,
+          amount: booking.totalAmount,
+          currency: 'INR',
+          gateway: booking.payment.method === 'razorpay' ? 'RAZORPAY' : 'CASH',
+          status: TransactionStatus.SUCCESS,
+          notes: `Confirmed via admin update. Previous status: ${previousStatus}`,
+          paidAt: new Date(),
+        });
+
       await sendBookingConfirmationEmail(booking, []).catch(console.error);
+    }
   }
 
   return booking;

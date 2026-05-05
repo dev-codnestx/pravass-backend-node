@@ -4,4 +4,5 @@ export enum BANNER_PLACEMENTS {
   SIDEBAR = 'Sidebar',
   FOOTER = 'Footer',
   TOUR_PAGE = 'Tour Page',
+  PROMOTIONAL = 'Promotional',
 }
