@@ -9,7 +9,8 @@
       "watch": false,
       "time": true,
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "PORT": 10000
       }
     }
   ]
