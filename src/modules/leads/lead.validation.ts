@@ -14,10 +14,14 @@ const createLead = {
     name: Joi.string().trim().required(),
     email: Joi.string().trim().email().allow('', null),
     phone: Joi.string().trim().required(),
-    sourceId: Joi.string().trim().custom(objectId).required(),
+    sourceId: Joi.string().trim().custom(objectId),
+    source: Joi.string().trim(),
     tourId: Joi.string().trim().custom(objectId).allow('', null),
+    tour: Joi.string().trim(),
     destinationId: Joi.string().trim().custom(objectId).allow('', null),
-    leadStageId: Joi.string().trim().custom(objectId).required(),
+    destinationInterest: Joi.string().trim(),
+    leadStageId: Joi.string().trim().custom(objectId),
+    category: Joi.string().trim(),
     status: Joi.string()
       .trim()
       .lowercase()
@@ -26,6 +30,7 @@ const createLead = {
     travelDates: Joi.string().trim().allow('', null),
     assignedToId: Joi.string().trim().custom(objectId).allow('', null),
     stageOrder: Joi.number().integer().min(1).allow(null),
+    notes: Joi.array().items(Joi.string().trim()),
   }),
 };
 

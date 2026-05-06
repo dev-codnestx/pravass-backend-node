@@ -15,10 +15,12 @@ export interface IBanner {
   ctaText?: string;
   ctaLink?: string;
   image?: string;
+  orientation?: 'horizontal' | 'vertical';
   createdBy?: Types.ObjectId;
   updatedBy?: Types.ObjectId;
   createdAt?: Date;
   updatedAt?: Date;
+  tours?: Types.ObjectId[];
 }
 
 export interface IBannerDoc extends IBanner, Document {}

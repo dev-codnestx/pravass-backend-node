@@ -13,7 +13,7 @@ const router = express.Router();
 router
   .route('/')
   .post(
-    authMiddleware(),
+    authMiddleware({ allowGuestFor: ['website'] }),
     validateMiddleware(leadValidation.createLead),
     setAuditFields({ mode: AuditMode.CREATE }),
     leadController.createLead,

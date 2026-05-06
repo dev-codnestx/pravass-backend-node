@@ -36,7 +36,7 @@ router
 
 router
   .route('/:bookingId')
-  .get(authMiddleware('bookings:read'), validateMiddleware(bookingValidation.getBooking), bookingController.getBooking)
+  .get(authMiddleware(), validateMiddleware(bookingValidation.getBooking), bookingController.getBooking)
   .patch(
     authMiddleware('bookings:update'),
     validateMiddleware(bookingValidation.updateBooking),

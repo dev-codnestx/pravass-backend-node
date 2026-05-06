@@ -26,8 +26,14 @@ const bannerSchema = new Schema<IBannerDoc, IBannerModel>(
     ctaText: { type: String, trim: true },
     ctaLink: { type: String, trim: true },
     image: { type: String, trim: true, required: true },
+    orientation: {
+      type: String,
+      enum: ['horizontal', 'vertical'],
+      default: 'horizontal',
+    },
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     updatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    tours: [{ type: Schema.Types.ObjectId, ref: 'Tour' }],
   },
   {
     timestamps: true,

@@ -1,14 +1,14 @@
 export enum TicketStatus {
-  OPEN = 'Open',
-  IN_PROGRESS = 'In Progress',
-  RESOLVED = 'Resolved',
-  CLOSED = 'Closed',
+  OPEN = 'open',
+  IN_PROGRESS = 'in_progress',
+  RESOLVED = 'resolved',
+  CLOSED = 'closed',
 }
 
 export enum TicketPriority {
-  HIGH = 'High',
-  MEDIUM = 'Medium',
-  LOW = 'Low',
+  HIGH = 'high',
+  MEDIUM = 'medium',
+  LOW = 'low',
 }
 
 export enum MessageFrom {
