@@ -44,6 +44,7 @@ const locationSchema = createMasterSchema({
   countryId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
   regionId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
   stateId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  zoneId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
 });
 
 const destinationSchema = createMasterSchema(
