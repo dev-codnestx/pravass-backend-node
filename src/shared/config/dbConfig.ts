@@ -22,6 +22,7 @@ const connectToDatabase = async (): Promise<void> => {
   const fallbackURI = 'mongodb://127.0.0.1:27017/test_db';
 
   try {
+    mongoose.set('strictPopulate', false);
     logger.info(`Attempting primary MongoDB connection: ${safeMongoURI}`);
     await mongoose.connect(mongoURI);
     logger.info('Successfully connected to primary MongoDB');
