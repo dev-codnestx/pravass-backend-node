@@ -1,8 +1,5 @@
 import 'tsconfig-paths/register.js'; // 👈 this must be first
 
-import mongoose from 'mongoose';
-mongoose.set('strictPopulate', false); // Must be set before any model/schema is loaded
-
 import { Server } from 'http';
 
 import app from '@/app.js';
