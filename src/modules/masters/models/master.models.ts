@@ -66,6 +66,7 @@ const destinationSchema = createMasterSchema(
 const departureCitySchema = createMasterSchema({
   countryId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
   stateId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
+  zoneId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
   cityId: { type: Schema.Types.ObjectId, ref: 'MasterLocation' },
   country: { type: String, trim: true },
   state: { type: String, trim: true },
