@@ -136,6 +136,7 @@ jobs:
             git clean -fd
 
             npm ci
+            npx tsc --build --clean || true
             npm run compile
 
             if [ "$BRANCH_NAME" = "master" ]; then
