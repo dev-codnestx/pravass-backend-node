@@ -51,6 +51,10 @@ const seatState = Joi.object({
   column: Joi.number().allow(null),
   level: Joi.string().allow('', null),
   type: Joi.string().allow('', null),
+  number: Joi.string().allow('', null),
+  bookable: Joi.boolean().allow(null),
+  passengerName: Joi.string().allow('', null),
+  bookingId: Joi.string().allow('', null),
 });
 
 const departure = Joi.object({

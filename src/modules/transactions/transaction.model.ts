@@ -10,7 +10,7 @@ export enum TransactionStatus {
 
 export interface ITransaction {
   bookingId: Types.ObjectId;
-  userId: Types.ObjectId;
+  userId?: Types.ObjectId;
   transactionRef: string;
   amount: number;
   currency: string;
@@ -34,7 +34,7 @@ export interface ITransactionModel extends Model<ITransactionDoc> {
 const transactionSchema = new Schema<ITransactionDoc, ITransactionModel>(
   {
     bookingId: { type: Schema.Types.ObjectId, ref: 'Booking', required: true, index: true },
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true, index: true },
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: false, index: true },
     transactionRef: { type: String, unique: true, index: true },
     amount: { type: Number, required: true, min: 0 },
     currency: { type: String, default: 'INR' },
